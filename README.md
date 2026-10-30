@@ -1,4 +1,4 @@
-# FlyMind 1.0
+# FlyMind 1.2
 
 Aplicativo Android nativo que usa um recorte real do conectoma da mosca
 (*Drosophila melanogaster*, FlyWire FAFB v783) como circuito de aprendizagem.
@@ -7,30 +7,34 @@ recebe pulsos de dopamina computadorizada e tem os pesos sinápticos alterados
 por STDP de três fatores. As memórias ficam numa base SQLite local e podem ser
 consultadas por pergunta.
 
-O APK instalável está na release
+O APK da versão atual é `FlyMind-1.2.apk` (18 MB, assinado com a chave de debug
+do Android), gerado por `./gradlew :app:assembleDebug`. A release
 [v1.0.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.0.0)
-(FlyMind-1.0.apk, 18 MB, assinado com a chave de debug do Android). O arquivo
-não fica versionado — `.gitignore` exclui `*.apk` — só na release.
+ainda serve o APK antigo. Os `.apk` não são versionados — o `.gitignore` os
+exclui.
 
 ## O que o app faz
 
 | Aba | Função |
 |---|---|
-| **Ensinar** | Ensina um fato (tema, pergunta, resposta) ou um caderno inteiro, com 3 a 12 ensaios por fato. Mostra disparos, dopamina, estabilidade do engrama e mudança de peso. |
-| **Conversar** | Pergunta em texto. A mosca responde só com fatos que aprendeu; se não souber, diz que não aprendeu. Exibe confiança e similaridade do engrama. |
+| **Ensinar** | Ensina um fato (tema, pergunta, resposta), um caderno inteiro ou uma **página da web pela URL**, com 3 a 12 ensaios por trecho. Mostra disparos, dopamina, estabilidade do engrama e mudança de peso. |
+| **Conversar** | Pergunta em texto. A mosca responde só com fatos que aprendeu; se não souber, diz que não aprendeu. Exibe confiança, similaridade do engrama e as **conexões divergentes** que a pergunta despertou. |
 | **Memória** | Lista as memórias, permite reconsolidar (treinar de novo), apagar, limpar tudo e exportar JSON. |
-| **Voz** | Escolhe qualquer voz TTS instalada no aparelho, ajusta tom e velocidade, liga a fala automática e testa a voz. |
+| **Voz** | Escolhe qualquer voz TTS instalada no aparelho ou importa um **arquivo de voz pronto** (gerado por IA), ajusta tom e velocidade, liga a fala automática e testa. |
 | **Cérebro** | Estatísticas do conectoma, raster de disparos, plasticidade acumulada, estimulação espontânea e restauração dos pesos originais. |
 | **Sistema** | Aparelho/Android/HyperOS detectados, atalhos para bateria, autostart e restrições da MIUI/HyperOS, e opção de manter a tela ligada. |
+
+A interface segue a estética do iOS: fundo de listas agrupadas, cartões brancos
+com cabeçalhos de seção, controle segmentado, botões azuis arredondados, barra
+de abas no rodapé com ação azul e barras de sistema claras com ícones escuros.
 
 ## Instalação no Redmi Note 11S (HyperOS 1)
 
 Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 `minSdk 26`, `targetSdk 35` e `compileSdk 36`.
 
-1. Baixe
-   [FlyMind-1.0.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.0.0/FlyMind-1.0.apk)
-   e copie para o celular (cabo USB, Google Drive, Telegram etc.).
+1. Baixe `FlyMind-1.2.apk` (ou o APK anexado na release mais recente) e copie
+   para o celular (cabo USB, Google Drive, Telegram etc.).
 2. Abra o arquivo no gerenciador de arquivos e permita "instalar apps
    desconhecidos" para o app usado na instalação.
 3. Se o Play Protect avisar que o app não é reconhecido, escolha instalar
@@ -71,7 +75,35 @@ Separadores aceitos: `=`, `|` e `=>`. Linhas iniciadas por `#` ou `//` são
 ignoradas. Um caderno grande roda um fato por vez; o app mostra o progresso e
 pode manter a tela ligada durante a sessão.
 
+### Página inteira por URL
+
+Na aba **Ensinar**, o painel **Aprender de um site** recebe o endereço de uma
+página (com ou sem `https://`) e a transforma em memórias:
+
+1. **Buscar página** baixa só aquela URL (timeout de 15 s, teto de 2,5 MB) e
+   mostra título, host, número de trechos e quantidade de caracteres.
+2. **Aprender site** treina trecho por trecho, com os mesmos ensaios,
+   dopamina e consolidação do caderno em lote.
+
+Regras da extração ([WebSource.kt](app/src/main/java/com/flymind/brain/WebSource.kt)):
+
+- `script`, `style`, `noscript`, `svg`, `iframe`, formulários e comentários são
+  descartados; cada título (`h1`–`h6`) abre um trecho novo, e o texto até o
+  próximo título vira o corpo daquele trecho.
+- Parágrafos com menos de 60 caracteres (menu, aviso de cookies) são ignorados;
+  ficam no máximo 12 trechos de 700 caracteres cada.
+- Cada trecho vira um fato: o tema é o campo **Tema** (ou o título da página),
+  a pergunta é o título do trecho e a resposta é o texto do trecho.
+- Os links da página **não** são seguidos: o app não percorre o site inteiro
+  nem faz rastreamento.
+- Caracteres especiais e entidades HTML são decodificados; a codificação é
+  lida do cabeçalho `Content-Type` e, se faltar, do próprio HTML.
+
 ### Voz
+
+Existem duas fontes de fala, escolhidas na aba **Voz**:
+
+**1. Voz do sistema (TTS)**
 
 O app usa o motor TTS do Android, sem nuvem:
 
@@ -81,12 +113,26 @@ O app usa o motor TTS do Android, sem nuvem:
 3. No FlyMind, aba **Voz**, escolha a voz, ajuste tom/velocidade e use
    **Ouvir** para testar. A fala automática das respostas pode ser desligada.
 
+**2. Seu arquivo de voz (gerado por IA)**
+
+1. Gere ou baixe um arquivo de voz: MP3, M4A/AAC, WAV, OGG, FLAC, AMR ou 3GP.
+2. Na aba **Voz**, toque em **Escolher arquivo de voz** e selecione o arquivo
+   (o seletor do Android não exige nenhuma permissão).
+3. O arquivo é copiado para o armazenamento interno do app — nome, tamanho e
+   duração aparecem no painel, com **Ouvir** e **Remover**.
+4. Ligue **Usar meu arquivo nas respostas** e a mosca toca esse arquivo quando
+   responder, no lugar do TTS. O texto continua aparecendo na conversa.
+
+O arquivo é tocado inteiro como a fala da mosca: o app não sintetiza texto novo
+a partir dele, o que exigiria um modelo de clonagem de voz embarcado.
+
 ### HyperOS
 
 A integração é feita no que o Android permite a um app comum, sem root:
 
-- tema escuro fixo e ícone monocromático para os ícones temáticos do HyperOS;
-- tela cheia edge-to-edge, sem barras claras;
+- tema claro no estilo iOS, ícone monocromático para os ícones temáticos do
+  HyperOS e barras de sistema claras com ícones escuros;
+- tela cheia edge-to-edge;
 - atalhos que abrem as telas nativas de bateria, autostart e restrições de
   segundo plano da MIUI/HyperOS;
 - nenhum serviço em segundo plano, nenhuma permissão sensível e nenhum acesso
@@ -170,6 +216,28 @@ assembleias distantes não contem. A resposta é aceita se `score >= 0,42` ou se
 a similaridade lexical for `>= 0,55`. Caso contrário, o app responde que ainda
 não aprendeu.
 
+### Conexões divergentes
+
+Depois de escolher a resposta, o motor propaga ativação por uma rede de
+conceitos montada com **todas** as memórias aprendidas
+([Concepts.kt](app/src/main/java/com/flymind/brain/Concepts.kt)):
+
+- cada fato é reduzido a até 30 ideias (termos com 3+ letras, sem palavras de
+  ligação);
+- dois fatos se ligam pelo peso de Jaccard entre as ideias deles; fatos com
+  nenhuma ideia em comum não se ligam;
+- a ativação inicial vem da pergunta (70% similaridade lexical + 30% cobertura
+  de ideias), propaga 2 saltos com fator 0,6 e recebe ainda 0,35 × similaridade
+  de engrama calibrada;
+- só entram ideias com ativação `>= 0,07`, no máximo 3, e a resposta direta é
+  excluída;
+- a bolha mostra **CONECTA COM**, a pergunta vizinha e o caminho (`via luz,
+  planta`). Tocar na pergunta vizinha já pergunta aquilo à mosca.
+
+O efeito é o de associação divergente: uma pergunta sobre fotossíntese puxa a
+memória de clorofila mesmo sem repetir as palavras da resposta principal. Se
+nada tiver conceito em comum, o app não inventa ligação — a lista fica vazia.
+
 ### Persistência
 
 - [FlyMindDatabase.kt](app/src/main/java/com/flymind/data/FlyMindDatabase.kt):
@@ -205,7 +273,7 @@ Saída: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Testes
 
-`./gradlew :app:testDebugUnitTest` roda 6 testes JVM, todos passando:
+`./gradlew :app:testDebugUnitTest` roda 11 testes JVM, todos passando:
 
 - carga do asset real, contagens e 512 dimensões de leitura;
 - estimulação produz disparos, engrama e mudança de peso;
@@ -214,7 +282,12 @@ Saída: `app/build/outputs/apk/debug/app-debug.apk`.
   exata (score 0,80; lexical 0,68; engrama 0,99);
 - pergunta não ensinada não é respondida;
 - paráfrase com as mesmas palavras-chave recupera o fato correto (score 0,75
-  contra 0,14 do melhor fato errado).
+  contra 0,14 do melhor fato errado);
+- extração de HTML sem `script`/`style`, com títulos virando seções de texto;
+- decodificação de entidades, normalização de URL sem esquema e recusa de `ftp`;
+- dois fatos de biologia se conectam por ideias em comum e o fato de futebol
+  não é ligado a eles;
+- a consulta devolve conexões divergentes sem repetir a resposta direta.
 
 Medições do teste de treino (JVM, não no celular): 67.380 disparos, 15 pulsos de
 dopamina, estabilidade 0,993 e mudança média de peso de 12,0%.
@@ -247,8 +320,11 @@ app/src/main/java/com/flymind/
   brain/SpikingBrain.kt    LIF, STDP, dopamina, engrama
   brain/TextCode.kt        codificação de texto, similaridade, parser do caderno
   brain/LearningEngine.kt  treino, recuperação, snapshot de pesos
+  brain/Concepts.kt        ideias, ligações entre fatos e associação divergente
+  brain/WebSource.kt       busca da página e extração de trechos aprendíveis
   data/                    modelos e SQLite
   voice/VoiceEngine.kt     TTS, vozes e preferências
+  voice/VoiceFilePlayer.kt importa e toca arquivo de voz (IA)
   ui/                      ViewModel, tema, componentes e telas Compose
   hyperos/HyperOs.kt       detecção e atalhos MIUI/HyperOS
   util/ShareUtil.kt        exportação JSON
@@ -264,9 +340,10 @@ app/src/main/assets/connectome/flywire_mb.bin
 - **A dopamina é um escalar global.** O app tem 331 neurônios dopaminérgicos e
   os estimula, mas o sinal de recompensa que altera pesos é compartilhado. A
   biologia usa compartimentos e valências distintos.
-- **O aprendizado é supervisionado.** Você fornece pares pergunta/resposta. O
-  app não descobre sozinho o que é relevante, não faz aprendizado por reforço
-  de tentativa e erro e não aprende com texto solto.
+- **O aprendizado é supervisionado.** Você fornece pares pergunta/resposta ou
+  uma URL. O app não descobre sozinho o que é relevante, não faz aprendizado
+  por reforço de tentativa e erro, não navega em links e não escolhe temas por
+  conta própria.
 - **Não é um LLM.** As respostas são recuperação associativa de fatos
   ensinados, não geração livre. Paráfrases com as mesmas palavras-chave
   funcionam; sinônimos sem sobreposição lexical podem falhar.
@@ -280,9 +357,11 @@ app/src/main/assets/connectome/flywire_mb.bin
   privada, widget, tile de configurações rápidas ou serviço persistente. Os
   atalhos abrem telas do sistema; o resto é tema, ícone, edge-to-edge e
   comportamento de tela.
-- **Sem internet.** O manifesto não declara `INTERNET`; o TTS pode usar vozes
-  locais ou de rede conforme a voz escolhida no sistema, mas o app não envia
-  dados.
+- **Internet só sob demanda.** O manifesto declara `INTERNET` apenas para
+  baixar a página que você cola na aba Ensinar. Nenhum outro dado sai do
+  aparelho, não há telemetria, conta ou servidor do app, e os links da página
+  não são seguidos. O TTS usa vozes locais ou de rede conforme a voz escolhida
+  no sistema.
 - **Desempenho.** Rodar 6 ensaios custa cerca de 67 mil disparos na JVM. Em
   celulares intermediários como o Redmi Note 11S, espere segundos por fato e
   minutos para cadernos grandes.

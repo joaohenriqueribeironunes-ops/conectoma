@@ -36,4 +36,5 @@ object EventKind {
     const val REPLAY = "replay"
     const val FORGET = "forget"
     const val RESET = "reset"
+    const val LINK = "link"
 }

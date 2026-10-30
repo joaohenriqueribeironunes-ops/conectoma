@@ -1,5 +1,6 @@
 package com.flymind.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BatterySaver
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +39,8 @@ import com.flymind.hyperos.HyperOs
 import com.flymind.ui.FlyUiState
 import com.flymind.ui.Panel
 import com.flymind.ui.theme.Amber
+import com.flymind.ui.theme.Fill
+import com.flymind.ui.theme.Separator
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextSecondary
 
@@ -100,6 +105,7 @@ fun SystemScreen(
                     )
                     Button(
                         onClick = { HyperOs.openBatterySettings(context) },
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Rounded.BatterySaver, contentDescription = null)
@@ -108,6 +114,7 @@ fun SystemScreen(
                     }
                     Button(
                         onClick = { HyperOs.openAutostart(context) },
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null)
@@ -116,6 +123,12 @@ fun SystemScreen(
                     }
                     OutlinedButton(
                         onClick = { HyperOs.openPowerKeeper(context) },
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(0.5.dp, Separator),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Fill,
+                            contentColor = Teal,
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Rounded.Settings, contentDescription = null)
@@ -155,12 +168,14 @@ fun SystemScreen(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        "• Tema escuro e ícone monocromático compatíveis com ícones temáticos do HyperOS.",
+                        "• Tema claro no estilo iOS e ícone monocromático compatível com os " +
+                            "ícones temáticos do HyperOS.",
                         fontSize = 12.sp,
                         color = TextSecondary,
                     )
                     Text(
-                        "• Nenhuma permissão sensível: o TTS é do sistema e o banco fica local.",
+                        "• Permissão única de internet, usada só para buscar as URLs que você " +
+                            "pedir. TTS e banco ficam locais; nada é enviado para terceiros.",
                         fontSize = 12.sp,
                         color = TextSecondary,
                     )

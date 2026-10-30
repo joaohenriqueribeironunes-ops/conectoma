@@ -1,5 +1,6 @@
 package com.flymind.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Refresh
@@ -26,7 +29,6 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,13 +51,15 @@ import com.flymind.data.EventKind
 import com.flymind.data.Fact
 import com.flymind.data.LearningEvent
 import com.flymind.ui.FlyUiState
+import com.flymind.ui.IosSegmented
 import com.flymind.ui.Panel
 import com.flymind.ui.StrengthBar
 import com.flymind.ui.formatTime
 import com.flymind.ui.theme.Amber
 import com.flymind.ui.theme.Outline
+import com.flymind.ui.theme.Separator
+import com.flymind.ui.theme.Surface
 import com.flymind.ui.theme.Rose
-import com.flymind.ui.theme.SurfaceHigh
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextSecondary
 
@@ -105,18 +109,17 @@ fun MemoryScreen(
         }
 
         Row(
-            Modifier.padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
         ) {
-            FilterChip(
-                selected = !showDiary,
-                onClick = { showDiary = false },
-                label = { Text("Memórias (${state.facts.size})") },
-            )
-            FilterChip(
-                selected = showDiary,
-                onClick = { showDiary = true },
-                label = { Text("Diário (${state.events.size})") },
+            IosSegmented(
+                options = listOf(
+                    "Memórias (${state.facts.size})",
+                    "Diário (${state.events.size})",
+                ),
+                selectedIndex = if (showDiary) 1 else 0,
+                onSelect = { showDiary = it == 1 },
             )
         }
 
@@ -169,6 +172,7 @@ fun MemoryScreen(
 
     if (confirmClear) {
         AlertDialog(
+            shape = RoundedCornerShape(14.dp),
             onDismissRequest = { confirmClear = false },
             title = { Text("Apagar todas as memórias?") },
             text = {
@@ -191,6 +195,7 @@ fun MemoryScreen(
 
     confirmDelete?.let { fact ->
         AlertDialog(
+            shape = RoundedCornerShape(14.dp),
             onDismissRequest = { confirmDelete = null },
             title = { Text("Esquecer esta memória?") },
             text = { Text(fact.question) },
@@ -215,8 +220,9 @@ private fun FactCard(
     onDelete: () -> Unit,
 ) {
     Card(
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = SurfaceHigh),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        border = BorderStroke(0.5.dp, Separator.copy(alpha = 0.6f)),
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,12 +289,14 @@ private fun EventCard(event: LearningEvent) {
         EventKind.RECALL -> Triple(Icons.Rounded.Psychology, Amber, "lembrou")
         EventKind.MISS -> Triple(Icons.Rounded.Search, Rose, "não sabia")
         EventKind.REPLAY -> Triple(Icons.Rounded.Refresh, Amber, "reconsolidou")
+        EventKind.LINK -> Triple(Icons.Rounded.Hub, Teal, "conectou")
         EventKind.FORGET -> Triple(Icons.Rounded.Delete, Rose, "esqueceu")
         else -> Triple(Icons.Rounded.Psychology, TextSecondary, "evento")
     }
     Card(
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = SurfaceHigh),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        border = BorderStroke(0.5.dp, Separator.copy(alpha = 0.6f)),
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))

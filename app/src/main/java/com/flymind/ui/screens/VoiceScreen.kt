@@ -1,5 +1,9 @@
 package com.flymind.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,11 +19,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,8 +50,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flymind.ui.FlyUiState
 import com.flymind.ui.Panel
+import com.flymind.ui.formatDuration
+import com.flymind.ui.formatSize
 import com.flymind.ui.theme.Amber
+import com.flymind.ui.theme.Fill
 import com.flymind.ui.theme.Rose
+import com.flymind.ui.theme.Separator
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextSecondary
 import com.flymind.voice.VoiceInfo
@@ -55,8 +67,17 @@ fun VoiceScreen(
     onSettings: (VoiceSettings) -> Unit,
     onTest: (String) -> Unit,
     onStop: () -> Unit,
+    onImportFile: (Uri) -> Unit,
+    onPlayFile: () -> Unit,
+    onRemoveFile: () -> Unit,
+    onToggleFile: (Boolean) -> Unit,
 ) {
     var showPicker by rememberSaveable { mutableStateOf(false) }
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) onImportFile(uri)
+    }
     var testPhrase by rememberSaveable {
         mutableStateOf("Olá. Eu sou a mosca do FlyMind. Aprendi sobre o mundo com você.")
     }
@@ -161,6 +182,141 @@ fun VoiceScreen(
 
         item {
             Panel(
+                title = "Minha voz (arquivo de IA)",
+                subtitle = "Importe um arquivo de voz pronto e use como a fala da mosca.",
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val file = state.voiceFile
+                    if (file != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.MusicNote,
+                                contentDescription = null,
+                                tint = Teal,
+                                modifier = Modifier.size(26.dp),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    file.displayName,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 2,
+                                )
+                                Text(
+                                    "${formatSize(file.sizeBytes)} · ${formatDuration(file.durationMs)}",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary,
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(
+                                onClick = onPlayFile,
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(0.5.dp, Separator),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Fill,
+                                    contentColor = Teal,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(
+                                    if (state.voiceFilePlaying) Icons.Rounded.Stop
+                                    else Icons.Rounded.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    if (state.voiceFilePlaying) "Parar" else "Ouvir",
+                                    fontSize = 13.sp,
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = onRemoveFile,
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(0.5.dp, Separator),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Fill,
+                                    contentColor = Rose,
+                                ),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("Remover", fontSize = 13.sp)
+                            }
+                        }
+                    } else {
+                        Text(
+                            "Nenhum arquivo escolhido ainda.",
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                        )
+                    }
+
+                    Button(
+                        onClick = { filePicker.launch(arrayOf("audio/*")) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.MusicNote,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (state.voiceFile == null) "Escolher arquivo de voz"
+                            else "Trocar arquivo",
+                            fontSize = 15.sp,
+                        )
+                    }
+
+                    if (state.voiceFile != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Usar meu arquivo nas respostas", fontSize = 13.sp)
+                                Text(
+                                    "No lugar do TTS do sistema, a mosca toca este arquivo ao responder.",
+                                    fontSize = 10.sp,
+                                    color = TextSecondary,
+                                )
+                            }
+                            Switch(
+                                checked = state.useVoiceFile,
+                                onCheckedChange = onToggleFile,
+                            )
+                        }
+                    }
+
+                    if (state.voiceFileError != null) {
+                        Text(
+                            state.voiceFileError,
+                            fontSize = 12.sp,
+                            color = Rose,
+                        )
+                    }
+
+                    Text(
+                        "Aceita MP3, M4A/AAC, WAV, OGG, FLAC, AMR e 3GP. O arquivo é tocado " +
+                            "inteiro como a fala da mosca — o app não sintetiza texto novo a partir dele.",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                    )
+                }
+            }
+        }
+
+        item {
+            Panel(
                 title = "Testar a voz",
                 subtitle = "O texto abaixo é falado com a voz e os ajustes atuais.",
             ) {
@@ -210,6 +366,7 @@ fun VoiceScreen(
 
     if (showPicker) {
         AlertDialog(
+            shape = RoundedCornerShape(14.dp),
             onDismissRequest = { showPicker = false },
             title = { Text("Escolher voz") },
             text = {

@@ -1,20 +1,27 @@
 package com.flymind.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.flymind.brain.BrainStatus
+import com.flymind.brain.Concepts
+import com.flymind.brain.DivergentIdea
 import com.flymind.brain.LearningEngine
 import com.flymind.brain.RecallOutcome
 import com.flymind.brain.SimTrace
 import com.flymind.brain.TextCode
 import com.flymind.brain.TrainProgress
 import com.flymind.brain.TrainingOutcome
+import com.flymind.brain.WebPage
+import com.flymind.brain.WebSource
 import com.flymind.data.EventKind
 import com.flymind.data.Fact
 import com.flymind.data.FlyMindDatabase
 import com.flymind.data.LearningEvent
 import com.flymind.voice.VoiceEngine
+import com.flymind.voice.VoiceFileInfo
+import com.flymind.voice.VoiceFilePlayer
 import com.flymind.voice.VoiceInfo
 import com.flymind.voice.VoiceSettings
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +34,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class RelatedIdea(
+    val question: String,
+    val via: String,
+)
+
 data class ChatMessage(
     val id: Long,
     val fromUser: Boolean,
@@ -34,6 +46,7 @@ data class ChatMessage(
     val confidence: Float? = null,
     val engram: Float? = null,
     val source: String? = null,
+    val related: List<RelatedIdea> = emptyList(),
     val at: Long = System.currentTimeMillis(),
 )
 
@@ -56,6 +69,13 @@ data class FlyUiState(
     val ttsReady: Boolean = false,
     val ttsError: String? = null,
     val ttsEngine: String = "",
+    val voiceFile: VoiceFileInfo? = null,
+    val voiceFilePlaying: Boolean = false,
+    val voiceFileError: String? = null,
+    val useVoiceFile: Boolean = false,
+    val webLoading: Boolean = false,
+    val webError: String? = null,
+    val webPreview: WebPage? = null,
     val keepScreenOn: Boolean = false,
     val spontaneousRunning: Boolean = false,
 )
@@ -64,6 +84,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = FlyMindDatabase(application)
     private val voice = VoiceEngine(application)
+    private val voiceFile = VoiceFilePlayer(application)
     private val prefs = application.getSharedPreferences("ui", Application.MODE_PRIVATE)
 
     private var engineError: String? = null
@@ -78,6 +99,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         FlyUiState(
             brainError = engineError,
             voiceSettings = voice.settings(),
+            voiceFile = voiceFile.info.value,
+            voiceFilePlaying = voiceFile.playing.value,
+            voiceFileError = voiceFile.error.value,
+            useVoiceFile = prefs.getBoolean("use_voice_file", false),
             keepScreenOn = prefs.getBoolean("keep_screen_on", false),
         ),
     )
@@ -96,6 +121,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             voice.engineLabel.collect { label -> _state.update { it.copy(ttsEngine = label) } }
+        }
+        viewModelScope.launch {
+            voiceFile.info.collect { file -> _state.update { it.copy(voiceFile = file) } }
+        }
+        viewModelScope.launch {
+            voiceFile.playing.collect { playing -> _state.update { it.copy(voiceFilePlaying = playing) } }
+        }
+        viewModelScope.launch {
+            voiceFile.error.collect { error -> _state.update { it.copy(voiceFileError = error) } }
         }
         refresh()
     }
@@ -137,7 +171,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     refresh()
                     snackbar("Memória consolidada: ${fact.topic}.")
                     if (_state.value.voiceSettings.autoSpeak) {
-                        voice.speak("Aprendi sobre ${fact.topic}.", _state.value.voiceSettings)
+                        speakOrPlay("Aprendi sobre ${fact.topic}.")
                     }
                 }
             } catch (error: Throwable) {
@@ -173,11 +207,83 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 refresh()
                 snackbar("$learned de ${items.size} fatos consolidados.")
                 if (learned > 0 && _state.value.voiceSettings.autoSpeak) {
-                    voice.speak("Aprendi $learned fatos novos.", _state.value.voiceSettings)
+                    speakOrPlay("Aprendi $learned fatos novos.")
                 }
             } catch (error: Throwable) {
                 _state.update { it.copy(teaching = false, progress = null, batchLabel = null) }
                 snackbar("Erro no caderno: ${error.message}")
+            }
+        }
+    }
+
+    /** Busca a página para mostrar o que ela contém antes de ensinar. */
+    fun previewUrl(rawUrl: String) {
+        val target = rawUrl.trim()
+        if (target.isEmpty()) {
+            snackbar("Cole a URL da página que deseja ensinar.")
+            return
+        }
+        if (_state.value.webLoading) return
+        _state.update { it.copy(webLoading = true, webError = null, webPreview = null) }
+        viewModelScope.launch {
+            try {
+                val page = withContext(Dispatchers.IO) { WebSource.fetch(target) }
+                if (page.sections.isEmpty()) {
+                    _state.update {
+                        it.copy(webLoading = false, webError = "A página não trouxe texto legível.")
+                    }
+                } else {
+                    _state.update { it.copy(webLoading = false, webPreview = page) }
+                }
+            } catch (error: Throwable) {
+                _state.update {
+                    it.copy(webLoading = false, webError = "Não consegui buscar: ${error.message}")
+                }
+            }
+        }
+    }
+
+    /** Ensina, trecho a trecho, a página já buscada. */
+    fun teachFromUrl(rawUrl: String, topic: String, trials: Int) {
+        val page = _state.value.webPreview ?: run {
+            snackbar("Busque a página antes de ensinar.")
+            return
+        }
+        val wanted = runCatching { WebSource.normalize(rawUrl) }.getOrNull()
+        if (wanted != null && rawUrl.isNotBlank() && page.url != wanted) {
+            snackbar("A URL mudou depois da busca. Busque a página de novo.")
+            return
+        }
+        if (_state.value.teaching) return
+        if (engine == null) {
+            snackbar(engineError ?: "Conectoma indisponível.")
+            return
+        }
+        _state.update { it.copy(teaching = true, progress = null, batchLabel = "Lendo a página...") }
+        viewModelScope.launch {
+            var learned = 0
+            try {
+                page.sections.forEachIndexed { index, section ->
+                    _state.update {
+                        it.copy(batchLabel = "${index + 1}/${page.sections.size}: ${section.title.take(44)}")
+                    }
+                    val chosenTopic = topic.trim().ifEmpty {
+                        page.title.ifEmpty { page.host }
+                    }
+                    val reference = section.title.ifEmpty {
+                        section.body.split(Regex("[.!?]")).first().take(90)
+                    }
+                    if (learnFact(chosenTopic, reference, section.body, trials) != null) learned++
+                }
+                _state.update { it.copy(teaching = false, progress = null, batchLabel = null) }
+                refresh()
+                snackbar("$learned de ${page.sections.size} trechos aprendidos de ${page.host}.")
+                if (learned > 0 && _state.value.voiceSettings.autoSpeak) {
+                    speakOrPlay("Aprendi $learned trechos de ${page.host}.")
+                }
+            } catch (error: Throwable) {
+                _state.update { it.copy(teaching = false, progress = null, batchLabel = null) }
+                snackbar("Erro ao aprender a página: ${error.message}")
             }
         }
     }
@@ -222,6 +328,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     createdAt = fact.createdAt,
                 ),
             )
+        }
+        // Liga a nova memória às ideias que já existem e registra no diário.
+        val existing = withContext(Dispatchers.IO) { db.listFacts() }.filter { it.id != id }
+        val connections = Concepts.linksTo(fact.copy(id = id), existing)
+        if (connections.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                db.addEvent(
+                    LearningEvent(
+                        kind = EventKind.LINK,
+                        topic = safeTopic,
+                        title = question,
+                        detail = connections.take(3).joinToString("; ") { (other, shared) ->
+                            "${other.question.take(44)} ← ${shared.joinToString(", ")}"
+                        },
+                        strength = (connections.first().second.size / 6f).coerceIn(0f, 1f),
+                        spikes = 0,
+                        daPulses = 0,
+                        createdAt = System.currentTimeMillis(),
+                    ),
+                )
+            }
         }
         _state.update { it.copy(lastTraining = outcome, lastTrace = outcome.trace) }
         return fact.copy(id = id)
@@ -288,10 +415,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             confidence = best.score,
                             engram = best.engramSimilarity,
                             source = best.fact.topic,
+                            related = relatedOf(outcome.divergent),
                         ),
                     )
                     if (_state.value.voiceSettings.autoSpeak) {
-                        voice.speak(best.fact.answer, _state.value.voiceSettings)
+                        speakOrPlay(best.fact.answer)
                     }
                 } else {
                     val topics = facts.map { it.topic }.distinct().take(6).joinToString(", ")
@@ -300,7 +428,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         if (topics.isNotEmpty()) append(" As memórias que eu tenho são sobre: $topics.")
                         append(" Me ensina na aba Ensinar?")
                     }
-                    addMessage(ChatMessage(System.nanoTime(), fromUser = false, text = message))
+                    addMessage(
+                        ChatMessage(
+                            System.nanoTime(),
+                            fromUser = false,
+                            text = message,
+                            related = relatedOf(outcome.divergent),
+                        ),
+                    )
                     withContext(Dispatchers.IO) {
                         db.addEvent(
                             LearningEvent(
@@ -316,7 +451,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     }
                     if (_state.value.voiceSettings.autoSpeak) {
-                        voice.speak("Ainda não aprendi isso.", _state.value.voiceSettings)
+                        speakOrPlay("Ainda não aprendi isso.")
                     }
                 }
                 _state.update { it.copy(asking = false, lastTrace = outcome.trace) }
@@ -441,11 +576,48 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun testVoice(text: String) {
-        voice.speak(text.ifBlank { "Olá. Eu sou a mosca do FlyMind." }, _state.value.voiceSettings)
+        speakOrPlay(text.ifBlank { "Olá. Eu sou a mosca do FlyMind." })
     }
 
     fun stopVoice() {
         voice.stop()
+        voiceFile.stop()
+    }
+
+    /** Toca o arquivo de voz importado, fora do fluxo de respostas. */
+    fun playVoiceFile() {
+        if (_state.value.voiceFilePlaying) voiceFile.stop() else voiceFile.play()
+    }
+
+    fun importVoiceFile(uri: Uri) {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) { voiceFile.importFromUri(uri) }
+            if (ok) {
+                snackbar("Voz importada: ${voiceFile.info.value?.displayName}")
+            } else {
+                snackbar(voiceFile.error.value ?: "Arquivo de voz rejeitado.")
+            }
+        }
+    }
+
+    fun removeVoiceFile() {
+        voiceFile.remove()
+        setUseVoiceFile(false)
+        snackbar("Arquivo de voz removido.")
+    }
+
+    fun setUseVoiceFile(enabled: Boolean) {
+        prefs.edit().putBoolean("use_voice_file", enabled).apply()
+        _state.update { it.copy(useVoiceFile = enabled) }
+    }
+
+    /** Voz da mosca: arquivo de IA quando ativo, senão o TTS do sistema. */
+    private fun speakOrPlay(text: String) {
+        if (_state.value.useVoiceFile && _state.value.voiceFile != null) {
+            voiceFile.play()
+        } else {
+            voice.speak(text, _state.value.voiceSettings)
+        }
     }
 
     fun setKeepScreenOn(enabled: Boolean) {
@@ -490,12 +662,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(snackbar = message) }
     }
 
+    private fun relatedOf(ideas: List<DivergentIdea>): List<RelatedIdea> =
+        ideas.map { RelatedIdea(question = it.fact.question, via = it.via) }
+
     private fun addMessage(message: ChatMessage) {
         _state.update { it.copy(chat = (it.chat + message).takeLast(200)) }
     }
 
     override fun onCleared() {
         voice.shutdown()
+        voiceFile.close()
         db.close()
         super.onCleared()
     }

@@ -1,8 +1,11 @@
 package com.flymind.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.Psychology
@@ -31,6 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +48,7 @@ import com.flymind.ui.screens.MemoryScreen
 import com.flymind.ui.screens.SystemScreen
 import com.flymind.ui.screens.TeachScreen
 import com.flymind.ui.screens.VoiceScreen
+import com.flymind.ui.theme.Fill
 import com.flymind.ui.theme.Surface
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextSecondary
@@ -83,20 +89,32 @@ fun FlyMindRoot(vm: AppViewModel) {
                             Text(
                                 "FlyMind",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
+                                fontSize = 28.sp,
+                                letterSpacing = (-0.5).sp,
                             )
                             Text(
                                 state.brain?.let {
                                     "${it.stats.neurons} neurônios · ${it.stats.synapses} sinapses"
                                 } ?: "conectoma FlyWire",
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 color = TextSecondary,
                             )
                         }
                     },
                     actions = {
-                        IconButton(onClick = { systemOpen = true }) {
-                            Icon(Icons.Rounded.Settings, contentDescription = "Sistema e HyperOS")
+                        IconButton(
+                            onClick = { systemOpen = true },
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clip(CircleShape)
+                                .background(Fill),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Settings,
+                                contentDescription = "Sistema e HyperOS",
+                                tint = Teal,
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -105,17 +123,37 @@ fun FlyMindRoot(vm: AppViewModel) {
         },
         bottomBar = {
             if (!systemOpen) {
-                NavigationBar(containerColor = Surface) {
+                NavigationBar(
+                    containerColor = Surface,
+                    tonalElevation = 0.dp,
+                ) {
                     Tab.entries.forEachIndexed { index, tab ->
                         NavigationBarItem(
                             selected = state.tab == index,
                             onClick = { vm.setTab(index) },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label, fontSize = 9.sp) },
+                            icon = {
+                                Icon(
+                                    tab.icon,
+                                    contentDescription = tab.label,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            },
+                            label = {
+                                Text(
+                                    tab.label,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (state.tab == index) {
+                                        FontWeight.SemiBold
+                                    } else {
+                                        FontWeight.Normal
+                                    },
+                                )
+                            },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Teal,
                                 selectedTextColor = Teal,
-                                indicatorColor = Teal.copy(alpha = 0.16f),
+                                indicatorColor = Color.Transparent,
+                                unselectedIconColor = TextSecondary,
                                 unselectedTextColor = TextSecondary,
                             ),
                         )
@@ -137,6 +175,8 @@ fun FlyMindRoot(vm: AppViewModel) {
                         state = state,
                         onTeach = vm::teach,
                         onTeachBatch = vm::teachBatch,
+                        onPreviewUrl = vm::previewUrl,
+                        onTeachUrl = vm::teachFromUrl,
                     )
                     1 -> AskScreen(
                         state = state,
@@ -157,6 +197,10 @@ fun FlyMindRoot(vm: AppViewModel) {
                         onSettings = vm::setVoiceSettings,
                         onTest = vm::testVoice,
                         onStop = vm::stopVoice,
+                        onImportFile = vm::importVoiceFile,
+                        onPlayFile = vm::playVoiceFile,
+                        onRemoveFile = vm::removeVoiceFile,
+                        onToggleFile = vm::setUseVoiceFile,
                     )
                     else -> BrainScreen(
                         state = state,

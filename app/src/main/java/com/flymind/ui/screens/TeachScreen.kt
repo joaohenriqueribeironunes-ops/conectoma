@@ -20,10 +20,10 @@ import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -40,12 +40,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flymind.brain.TrainingOutcome
 import com.flymind.ui.FlyUiState
+import com.flymind.ui.IosSegmented
 import com.flymind.ui.LegendDot
 import com.flymind.ui.MetricPill
 import com.flymind.ui.Panel
 import com.flymind.ui.StrengthBar
 import com.flymind.ui.TraceChart
 import com.flymind.ui.theme.Amber
+import com.flymind.ui.theme.Rose
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextSecondary
 
@@ -54,6 +56,8 @@ fun TeachScreen(
     state: FlyUiState,
     onTeach: (String, String, String, Int) -> Unit,
     onTeachBatch: (String, String, Int) -> Unit,
+    onPreviewUrl: (String) -> Unit,
+    onTeachUrl: (String, String, Int) -> Unit,
 ) {
     var topic by rememberSaveable { mutableStateOf("Biologia") }
     var question by rememberSaveable { mutableStateOf("") }
@@ -61,6 +65,7 @@ fun TeachScreen(
     var notebook by rememberSaveable { mutableStateOf("") }
     var trials by rememberSaveable { mutableStateOf(6f) }
     var batchMode by rememberSaveable { mutableStateOf(false) }
+    var url by rememberSaveable { mutableStateOf("") }
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -71,21 +76,10 @@ fun TeachScreen(
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = !batchMode,
-                    onClick = { batchMode = false },
-                    label = { Text("Fato único") },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.School, contentDescription = null, Modifier.width(18.dp))
-                    },
-                )
-                FilterChip(
-                    selected = batchMode,
-                    onClick = { batchMode = true },
-                    label = { Text("Caderno") },
-                    leadingIcon = {
-                        Icon(Icons.Rounded.MenuBook, contentDescription = null, Modifier.width(18.dp))
-                    },
+                IosSegmented(
+                    options = listOf("Fato único", "Caderno"),
+                    selectedIndex = if (batchMode) 1 else 0,
+                    onSelect = { batchMode = it == 1 },
                 )
             }
         }
@@ -135,9 +129,10 @@ fun TeachScreen(
                         Button(
                             onClick = { onTeach(topic, question, answer, trials.toInt()) },
                             enabled = !state.teaching && question.isNotBlank() && answer.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp),
+                                .height(50.dp),
                         ) {
                             Icon(Icons.Rounded.Bolt, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
@@ -192,9 +187,10 @@ fun TeachScreen(
                         Button(
                             onClick = { onTeachBatch(topic, notebook, trials.toInt()) },
                             enabled = !state.teaching && notebook.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp),
+                                .height(50.dp),
                         ) {
                             Icon(Icons.Rounded.MenuBook, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
@@ -204,6 +200,84 @@ fun TeachScreen(
                             Text(state.batchLabel, color = Amber, fontSize = 12.sp)
                         }
                     }
+                }
+            }
+        }
+
+        item {
+            Panel(
+                title = "Aprender de um site",
+                subtitle = "Cole a URL de uma página e a mosca aprende o conteúdo dela.",
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = { Text("URL da página") },
+                        placeholder = { Text("https://...") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(
+                            onClick = { onPreviewUrl(url) },
+                            enabled = !state.teaching && !state.webLoading,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (state.webLoading) "Buscando..." else "Buscar página", fontSize = 14.sp)
+                        }
+                        Button(
+                            onClick = { onTeachUrl(url, topic, trials.toInt()) },
+                            enabled = !state.teaching && state.webPreview != null,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Aprender site", fontSize = 14.sp)
+                        }
+                    }
+                    if (state.webLoading) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp),
+                            color = Teal,
+                            trackColor = Teal.copy(alpha = 0.15f),
+                        )
+                    }
+                    if (state.webError != null) {
+                        Text(state.webError, fontSize = 12.sp, color = Rose)
+                    }
+                    state.webPreview?.let { page ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                page.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                            )
+                            Text(
+                                "${page.sections.size} trechos · ${page.chars} caracteres · ${page.host}",
+                                fontSize = 11.sp,
+                                color = TextSecondary,
+                            )
+                            page.sections.take(2).forEach { section ->
+                                Text(
+                                    "• ${section.title.ifEmpty { section.body.take(60) }}",
+                                    fontSize = 12.sp,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        "A busca usa a internet só para baixar esta página — nada é enviado. " +
+                            "O app não percorre o site inteiro: aprende o conteúdo da URL colada " +
+                            "e usa o tema acima para agrupar os trechos.",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                    )
                 }
             }
         }
@@ -255,7 +329,7 @@ private fun EnvironmentPanel(state: FlyUiState) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MetricPill("visual", "luz", Teal)
                 MetricPill("olfatório", "odor", Amber)
-                MetricPill("mecânico", "toque", Color(0xFFFF8FA3))
+                MetricPill("mecânico", "toque", Rose)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 LegendDot(Teal, "atividade")
@@ -288,7 +362,7 @@ private fun EnvironmentPanel(state: FlyUiState) {
                             "${(progress.stability * 100).toInt()}%",
                             Teal,
                         )
-                        MetricPill("assembleia", "${progress.activeNeurons}", Color(0xFFFF8FA3))
+                        MetricPill("assembleia", "${progress.activeNeurons}", Rose)
                     }
                 }
             } else {
@@ -312,7 +386,7 @@ private fun TrainResultPanel(outcome: TrainingOutcome) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MetricPill("estabilidade", "${(outcome.stability * 100).toInt()}%", Teal)
-                MetricPill("disparos", "${outcome.spikes}", Color(0xFFFF8FA3))
+                MetricPill("disparos", "${outcome.spikes}", Rose)
                 MetricPill("dopamina", "${outcome.daPulses} pulsos", Amber)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

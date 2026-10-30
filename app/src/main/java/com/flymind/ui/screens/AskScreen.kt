@@ -17,9 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -51,8 +53,9 @@ import com.flymind.ui.FlyUiState
 import com.flymind.ui.formatTime
 import com.flymind.ui.theme.Amber
 import com.flymind.ui.theme.Rose
-import com.flymind.ui.theme.SurfaceHigh
+import com.flymind.ui.theme.Surface
 import com.flymind.ui.theme.Teal
+import com.flymind.ui.theme.TextPrimary
 import com.flymind.ui.theme.TextSecondary
 
 @Composable
@@ -88,7 +91,7 @@ fun AskScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(state.chat, key = { it.id }) { message ->
-                    ChatBubble(message, onSpeak)
+                    ChatBubble(message, onSpeak, onAsk)
                 }
                 if (state.asking) {
                     item {
@@ -218,7 +221,11 @@ private fun EmptyConversation(state: FlyUiState, onSuggestion: (String) -> Unit)
 }
 
 @Composable
-private fun ChatBubble(message: ChatMessage, onSpeak: (String) -> Unit) {
+private fun ChatBubble(
+    message: ChatMessage,
+    onSpeak: (String) -> Unit,
+    onAsk: (String) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.fromUser) Arrangement.End else Arrangement.Start,
@@ -243,7 +250,7 @@ private fun ChatBubble(message: ChatMessage, onSpeak: (String) -> Unit) {
                 bottomEnd = 18.dp,
             ),
             colors = CardDefaults.cardColors(
-                containerColor = if (message.fromUser) Teal.copy(alpha = 0.16f) else SurfaceHigh,
+                containerColor = if (message.fromUser) Teal else Surface,
             ),
         ) {
             Column(Modifier.padding(12.dp)) {
@@ -256,7 +263,50 @@ private fun ChatBubble(message: ChatMessage, onSpeak: (String) -> Unit) {
                     )
                     Spacer(Modifier.height(3.dp))
                 }
-                Text(message.text, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    message.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (message.fromUser) Color.White else TextPrimary,
+                )
+                if (!message.fromUser && message.related.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "CONECTA COM",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.6.sp,
+                        color = Amber,
+                    )
+                    message.related.forEach { idea ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onAsk(idea.question) }
+                                .padding(top = 6.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Hub,
+                                contentDescription = null,
+                                tint = Teal,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                idea.question,
+                                fontSize = 12.sp,
+                                color = Teal,
+                                maxLines = 2,
+                            )
+                        }
+                        Text(
+                            "via ${idea.via}",
+                            fontSize = 9.sp,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(start = 20.dp),
+                        )
+                    }
+                }
                 if (!message.fromUser) {
                     Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -275,7 +325,11 @@ private fun ChatBubble(message: ChatMessage, onSpeak: (String) -> Unit) {
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(formatTime(message.at), fontSize = 9.sp, color = TextSecondary)
+                        Text(
+                            formatTime(message.at),
+                            fontSize = 9.sp,
+                            color = TextSecondary,
+                        )
                         Spacer(Modifier.width(4.dp))
                         IconButton(
                             onClick = { onSpeak(message.text) },

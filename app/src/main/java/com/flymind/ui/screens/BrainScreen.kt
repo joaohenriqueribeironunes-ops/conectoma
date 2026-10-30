@@ -1,5 +1,6 @@
 package com.flymind.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,10 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +40,9 @@ import com.flymind.ui.StatBlock
 import com.flymind.ui.StrengthBar
 import com.flymind.ui.TraceChart
 import com.flymind.ui.theme.Amber
+import com.flymind.ui.theme.Fill
 import com.flymind.ui.theme.Rose
+import com.flymind.ui.theme.Separator
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextSecondary
 
@@ -142,6 +147,12 @@ fun BrainScreen(
                         )
                         OutlinedButton(
                             onClick = { confirmReset = true },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, Separator),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Fill,
+                                contentColor = Teal,
+                            ),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.Rounded.RestartAlt, contentDescription = null)
@@ -163,6 +174,7 @@ fun BrainScreen(
                     Button(
                         onClick = onSpontaneous,
                         enabled = !state.spontaneousRunning && status != null,
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Rounded.Bolt, contentDescription = null)
@@ -241,6 +253,7 @@ fun BrainScreen(
 
     if (confirmReset) {
         androidx.compose.material3.AlertDialog(
+            shape = RoundedCornerShape(14.dp),
             onDismissRequest = { confirmReset = false },
             title = { Text("Restaurar pesos originais?") },
             text = {

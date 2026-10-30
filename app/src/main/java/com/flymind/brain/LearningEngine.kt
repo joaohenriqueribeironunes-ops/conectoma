@@ -37,6 +37,7 @@ data class RecallOutcome(
     val trace: SimTrace,
     val engram: FloatArray,
     val threshold: Float,
+    val divergent: List<DivergentIdea> = emptyList(),
 )
 
 data class BrainStatus(
@@ -140,12 +141,21 @@ class LearningEngine(
         }.sortedByDescending { it.score }
 
         val best = scored.firstOrNull()?.takeIf { it.score >= ACCEPT_THRESHOLD || it.lexical >= LEXICAL_ACCEPT }
+        // Associação divergente: propaga pela rede de conceitos as ideias que
+        // se conectam à pergunta, mesmo quando não são a resposta direta.
+        val ideas = Concepts.divergent(
+            query = question,
+            facts = facts,
+            queryEngram = engram,
+            excludeId = best?.fact?.id,
+        )
         return RecallOutcome(
             best = best,
             alternatives = scored.take(4),
             trace = trace,
             engram = engram,
             threshold = ACCEPT_THRESHOLD,
+            divergent = ideas,
         )
     }
 
