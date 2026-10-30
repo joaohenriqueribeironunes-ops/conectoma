@@ -7,8 +7,10 @@ recebe pulsos de dopamina computadorizada e tem os pesos sinápticos alterados
 por STDP de três fatores. As memórias ficam numa base SQLite local e podem ser
 consultadas por pergunta.
 
-O APK instalável está em [FlyMind-1.0.apk](FlyMind-1.0.apk) (debug, assinado
-com a chave de debug do Android).
+O APK instalável está na release
+[v1.0.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.0.0)
+(FlyMind-1.0.apk, 18 MB, assinado com a chave de debug do Android). O arquivo
+não fica versionado — `.gitignore` exclui `*.apk` — só na release.
 
 ## O que o app faz
 
@@ -26,8 +28,9 @@ com a chave de debug do Android).
 Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 `minSdk 26`, `targetSdk 35` e `compileSdk 36`.
 
-1. Copie [FlyMind-1.0.apk](FlyMind-1.0.apk) para o celular (cabo USB, Google
-   Drive, Telegram etc.).
+1. Baixe
+   [FlyMind-1.0.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.0.0/FlyMind-1.0.apk)
+   e copie para o celular (cabo USB, Google Drive, Telegram etc.).
 2. Abra o arquivo no gerenciador de arquivos e permita "instalar apps
    desconhecidos" para o app usado na instalação.
 3. Se o Play Protect avisar que o app não é reconhecido, escolha instalar
