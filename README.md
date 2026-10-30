@@ -8,12 +8,12 @@ por STDP de três fatores. As memórias ficam numa base SQLite local e podem ser
 consultadas por pergunta.
 
 O app se chama **Conectoma** desde a versão 1.3 (antes era FlyMind). O APK
-atual é o `Conectoma-1.5.apk` — 20 MB, `versionCode 6`, assinado com a chave de
-debug do Android — gerado por `./gradlew :app:assembleDebug`. SHA-256:
-`8d806b5d0c9448177a04d8447e8f00a277697ff0ca4b8e64046590c2a8575903`. A release
-[v1.2.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.2.0)
-ainda serve o APK anterior, com o nome antigo. Os `.apk` não são versionados —
-o `.gitignore` os exclui.
+atual está na release
+[v1.5.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.5.0)
+(`Conectoma-1.5.apk`, 20 MB, `versionCode 6`, assinado com a chave de debug do
+Android). SHA-256:
+`8d806b5d0c9448177a04d8447e8f00a277697ff0ca4b8e64046590c2a8575903`. Os `.apk`
+não são versionados — o `.gitignore` os exclui — só ficam na release.
 
 ## O que o app faz
 
@@ -60,10 +60,9 @@ camadas a partir da arte original.
 Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 `minSdk 26`, `targetSdk 35` e `compileSdk 36`.
 
-1. Baixe o APK da
-   [release mais recente](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases)
-   (ou use o `Conectoma-1.3.apk` gerado localmente) e copie para o celular
-   (cabo USB, Google Drive, Telegram etc.).
+1. Baixe
+   [Conectoma-1.5.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.5.0/Conectoma-1.5.apk)
+   e copie para o celular (cabo USB, Google Drive, Telegram etc.).
 2. Abra o arquivo no gerenciador de arquivos e permita "instalar apps
    desconhecidos" para o app usado na instalação.
 3. Se o Play Protect avisar que o app não é reconhecido, escolha instalar
@@ -72,7 +71,7 @@ Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 4. Alternativa por USB, com depuração USB ativada:
 
 ```bash
-adb install -r Conectoma-1.3.apk
+adb install -r Conectoma-1.5.apk
 ```
 
 Para atualizar depois, o `versionCode` precisa ser maior ou o app precisa ser
