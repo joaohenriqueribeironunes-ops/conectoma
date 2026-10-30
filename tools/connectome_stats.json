@@ -1,0 +1,24 @@
+{
+  "neurons": 6909,
+  "edges": 44893,
+  "labels": 573,
+  "roles": {
+    "inter": 5076,
+    "output": 486,
+    "dopamina": 331,
+    "input": 1016
+  },
+  "neurotransmitters": {
+    "acetylcholine": 5003,
+    "glutamate": 721,
+    "dopamine": 366,
+    "serotonin": 197,
+    "desconhecido": 11,
+    "gaba": 596,
+    "octopamine": 15
+  },
+  "max_out_degree": 90,
+  "mean_synapses_per_edge": 15.15,
+  "max_synapses": 1276,
+  "asset_bytes": 716147
+}

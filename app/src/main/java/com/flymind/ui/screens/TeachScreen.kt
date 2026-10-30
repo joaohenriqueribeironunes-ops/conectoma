@@ -1,0 +1,332 @@
+package com.flymind.ui.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Air
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Science
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.flymind.brain.TrainingOutcome
+import com.flymind.ui.FlyUiState
+import com.flymind.ui.LegendDot
+import com.flymind.ui.MetricPill
+import com.flymind.ui.Panel
+import com.flymind.ui.StrengthBar
+import com.flymind.ui.TraceChart
+import com.flymind.ui.theme.Amber
+import com.flymind.ui.theme.Teal
+import com.flymind.ui.theme.TextSecondary
+
+@Composable
+fun TeachScreen(
+    state: FlyUiState,
+    onTeach: (String, String, String, Int) -> Unit,
+    onTeachBatch: (String, String, Int) -> Unit,
+) {
+    var topic by rememberSaveable { mutableStateOf("Biologia") }
+    var question by rememberSaveable { mutableStateOf("") }
+    var answer by rememberSaveable { mutableStateOf("") }
+    var notebook by rememberSaveable { mutableStateOf("") }
+    var trials by rememberSaveable { mutableStateOf(6f) }
+    var batchMode by rememberSaveable { mutableStateOf(false) }
+
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item {
+            EnvironmentPanel(state)
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = !batchMode,
+                    onClick = { batchMode = false },
+                    label = { Text("Fato único") },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.School, contentDescription = null, Modifier.width(18.dp))
+                    },
+                )
+                FilterChip(
+                    selected = batchMode,
+                    onClick = { batchMode = true },
+                    label = { Text("Caderno") },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.MenuBook, contentDescription = null, Modifier.width(18.dp))
+                    },
+                )
+            }
+        }
+
+        if (!batchMode) {
+            item {
+                Panel(
+                    title = "O que a mosca deve aprender",
+                    subtitle = "Um fato por vez. A pergunta vira o padrão sensorial; a resposta vira a memória.",
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = topic,
+                            onValueChange = { topic = it },
+                            label = { Text("Tema") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = question,
+                            onValueChange = { question = it },
+                            label = { Text("Pergunta ou conceito") },
+                            placeholder = { Text("Ex.: O que é fotossíntese?") },
+                            minLines = 2,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = answer,
+                            onValueChange = { answer = it },
+                            label = { Text("Resposta que ela deve dar") },
+                            placeholder = {
+                                Text("Ex.: É o processo em que plantas usam luz, água e CO2 para produzir glicose e oxigênio.")
+                            },
+                            minLines = 3,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "Tentativas de treino: ${trials.toInt()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Slider(
+                            value = trials,
+                            onValueChange = { trials = it },
+                            valueRange = 3f..12f,
+                            steps = 8,
+                        )
+                        Button(
+                            onClick = { onTeach(topic, question, answer, trials.toInt()) },
+                            enabled = !state.teaching && question.isNotBlank() && answer.isNotBlank(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                        ) {
+                            Icon(Icons.Rounded.Bolt, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (state.teaching) "Ensinando..." else "Ensinar à mosca")
+                        }
+                    }
+                }
+            }
+        } else {
+            item {
+                Panel(
+                    title = "Caderno de ensino",
+                    subtitle = "Cole tudo o que ela deve aprender. Uma linha por memória.",
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = topic,
+                            onValueChange = { topic = it },
+                            label = { Text("Tema do caderno") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = notebook,
+                            onValueChange = { notebook = it },
+                            label = { Text("pergunta = resposta") },
+                            placeholder = {
+                                Text(
+                                    "O que é fotossíntese? = Processo que converte luz em energia química.\n" +
+                                        "Quem foi Santos Dumont? = Pioneiro da aviação, voou com o 14-Bis em 1906.\n" +
+                                        "O que é entropia? = Medida da desordem de um sistema.",
+                                )
+                            },
+                            minLines = 6,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "Aceita os separadores  =  |  =>  e ignora linhas com #.",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                        )
+                        Text(
+                            "Tentativas por fato: ${trials.toInt()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Slider(
+                            value = trials,
+                            onValueChange = { trials = it },
+                            valueRange = 3f..12f,
+                            steps = 8,
+                        )
+                        Button(
+                            onClick = { onTeachBatch(topic, notebook, trials.toInt()) },
+                            enabled = !state.teaching && notebook.isNotBlank(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                        ) {
+                            Icon(Icons.Rounded.MenuBook, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (state.teaching) "Aprendendo caderno..." else "Aprender caderno inteiro")
+                        }
+                        if (state.batchLabel != null) {
+                            Text(state.batchLabel, color = Amber, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (state.lastTraining != null && !state.teaching) {
+            item { TrainResultPanel(state.lastTraining) }
+        }
+
+        item {
+            Panel(
+                title = "Como o aprendizado acontece",
+                subtitle = "Circuito real, plasticidade simulada",
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(
+                        "O app embarca 6.909 neurônios e 44.893 sinapses do FlyWire FAFB v783 " +
+                            "(Drosophila melanogaster), incluindo 3.000 células de Kenyon, 331 neurônios " +
+                            "dopaminérgicos e as vias sensoriais de entrada.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                    )
+                    Text(
+                        "Quando você ensina, o texto vira um padrão de estimulação sensorial. O circuito " +
+                            "dispara e, ao fim de cada ensaio confirmado por você, o app libera uma rajada " +
+                            "de dopamina. A dopamina converte a elegibilidade STDP em mudança real de peso " +
+                            "sináptico — o mesmo princípio de recompensa dos corpos pedunculados.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                    )
+                    Text(
+                        "Isso não é um chatbot: a resposta vem do fato que você ensinou, indexado pela " +
+                            "assinatura de disparo do circuito.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Teal,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnvironmentPanel(state: FlyUiState) {
+    Panel(
+        title = "Ambiente simulado",
+        subtitle = "Estímulo sensorial → conectoma → recompensa",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricPill("visual", "luz", Teal)
+                MetricPill("olfatório", "odor", Amber)
+                MetricPill("mecânico", "toque", Color(0xFFFF8FA3))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                LegendDot(Teal, "atividade")
+                LegendDot(Amber, "dopamina")
+            }
+            val progress = state.progress
+            if (state.teaching) {
+                LinearProgressIndicator(
+                    progress = {
+                        if (progress == null) 0f
+                        else progress.trial.toFloat() / progress.totalTrials
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = Teal,
+                    trackColor = Teal.copy(alpha = 0.15f),
+                )
+                Text(
+                    if (progress == null) "Preparando estímulo..."
+                    else "Ensaio ${progress.trial} de ${progress.totalTrials} · ${progress.spikes} disparos",
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                )
+                if (progress != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MetricPill("dopamina", "${progress.daPulses} pulsos", Amber)
+                        MetricPill(
+                            "estabilidade",
+                            "${(progress.stability * 100).toInt()}%",
+                            Teal,
+                        )
+                        MetricPill("assembleia", "${progress.activeNeurons}", Color(0xFFFF8FA3))
+                    }
+                }
+            } else {
+                Text(
+                    "Circuito em repouso. A recompensa dopaminérgica só é liberada durante o treino.",
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                )
+                TraceChart(state.lastTrace)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrainResultPanel(outcome: TrainingOutcome) {
+    Panel(
+        title = "Memória consolidada",
+        subtitle = "Resultado do último treino",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricPill("estabilidade", "${(outcome.stability * 100).toInt()}%", Teal)
+                MetricPill("disparos", "${outcome.spikes}", Color(0xFFFF8FA3))
+                MetricPill("dopamina", "${outcome.daPulses} pulsos", Amber)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricPill("plasticidade", String.format("%.1f%%", outcome.weightDelta * 100f), Amber)
+                MetricPill("assembleia", "${outcome.assembly} neurônios", Teal)
+            }
+            Text("Engrama e atividade do último ensaio", fontSize = 11.sp, color = TextSecondary)
+            TraceChart(outcome.trace)
+            Text(
+                "A barra de dopamina mostra a recompensa; a linha clara mostra a fração de neurônios " +
+                    "disparando a cada milissegundo.",
+                fontSize = 11.sp,
+                color = TextSecondary,
+            )
+        }
+    }
+}

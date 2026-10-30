@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- asas -->
+    <path
+        android:fillColor="#FF4FD1B5"
+        android:fillAlpha="0.85"
+        android:pathData="M52,50 C40,32 24,30 17,40 C10,50 26,63 50,58 Z" />
+    <path
+        android:fillColor="#FF4FD1B5"
+        android:fillAlpha="0.85"
+        android:pathData="M56,50 C68,32 84,30 91,40 C98,50 82,63 58,58 Z" />
+    <path
+        android:fillColor="#FF9CF3DF"
+        android:fillAlpha="0.55"
+        android:pathData="M52,53 C42,42 30,41 25,46 C20,51 31,58 50,57 Z" />
+    <path
+        android:fillColor="#FF9CF3DF"
+        android:fillAlpha="0.55"
+        android:pathData="M56,53 C66,42 78,41 83,46 C88,51 77,58 58,57 Z" />
+
+    <!-- filetes das asas -->
+    <path
+        android:strokeColor="#FF0B2A25"
+        android:strokeWidth="1.2"
+        android:strokeAlpha="0.55"
+        android:pathData="M50,56 C40,50 30,44 20,40" />
+    <path
+        android:strokeColor="#FF0B2A25"
+        android:strokeWidth="1.2"
+        android:strokeAlpha="0.55"
+        android:pathData="M58,56 C68,50 78,44 88,40" />
+
+    <!-- corpo -->
+    <path
+        android:fillColor="#FFFFD166"
+        android:pathData="M54,42 C48,50 47,63 54,78 C61,63 60,50 54,42 Z" />
+    <path
+        android:fillColor="#FFF2A93B"
+        android:pathData="M54,56 C51,60 50.5,66 54,73 C57.5,66 57,60 54,56 Z" />
+
+    <!-- cabeça -->
+    <path
+        android:fillColor="#FFFFE0A3"
+        android:pathData="M54,35 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+
+    <!-- olhos -->
+    <path
+        android:fillColor="#FF07110F"
+        android:pathData="M50.5,34 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" />
+    <path
+        android:fillColor="#FF07110F"
+        android:pathData="M57.5,34 m-2.2,0 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" />
+
+    <!-- antenas -->
+    <path
+        android:strokeColor="#FFFFD166"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M50,29 C47,24 44,21 40,20" />
+    <path
+        android:strokeColor="#FFFFD166"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M58,29 C61,24 64,21 68,20" />
+
+    <!-- sinapse -->
+    <path
+        android:fillColor="#FFFF8FA3"
+        android:pathData="M54,84 m-2.4,0 a2.4,2.4 0 1,0 4.8,0 a2.4,2.4 0 1,0 -4.8,0" />
+</vector>
