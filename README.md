@@ -1,4 +1,4 @@
-# FlyMind 1.2
+# Conectoma 1.5
 
 Aplicativo Android nativo que usa um recorte real do conectoma da mosca
 (*Drosophila melanogaster*, FlyWire FAFB v783) como circuito de aprendizagem.
@@ -7,12 +7,13 @@ recebe pulsos de dopamina computadorizada e tem os pesos sinápticos alterados
 por STDP de três fatores. As memórias ficam numa base SQLite local e podem ser
 consultadas por pergunta.
 
-O APK da versão atual está na release
+O app se chama **Conectoma** desde a versão 1.3 (antes era FlyMind). O APK
+atual é o `Conectoma-1.5.apk` — 20 MB, `versionCode 6`, assinado com a chave de
+debug do Android — gerado por `./gradlew :app:assembleDebug`. SHA-256:
+`8d806b5d0c9448177a04d8447e8f00a277697ff0ca4b8e64046590c2a8575903`. A release
 [v1.2.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.2.0)
-(`FlyMind-1.2.apk`, 18 MB, `versionCode 3`, assinado com a chave de debug do
-Android). SHA-256:
-`fae8bec6672512f10334d7e5fe3af1ae987e062fd0d2d920e0e2e42e9c22ec51`. Os `.apk`
-não são versionados — o `.gitignore` os exclui — só ficam na release.
+ainda serve o APK anterior, com o nome antigo. Os `.apk` não são versionados —
+o `.gitignore` os exclui.
 
 ## O que o app faz
 
@@ -25,18 +26,44 @@ não são versionados — o `.gitignore` os exclui — só ficam na release.
 | **Cérebro** | Estatísticas do conectoma, raster de disparos, plasticidade acumulada, estimulação espontânea e restauração dos pesos originais. |
 | **Sistema** | Aparelho/Android/HyperOS detectados, atalhos para bateria, autostart e restrições da MIUI/HyperOS, e opção de manter a tela ligada. |
 
-A interface segue a estética do iOS: fundo de listas agrupadas, cartões brancos
-com cabeçalhos de seção, controle segmentado, botões azuis arredondados, barra
-de abas no rodapé com ação azul e barras de sistema claras com ícones escuros.
+A interface segue a linguagem visual do iOS, não o Material:
+
+- **Tipografia** em [Inter](https://rsms.me/inter/) (licença OFL, embarcada no
+  APK em `res/font`), a substituta livre mais próxima do SF Pro: large title de
+  34 dp, headline de 17 dp, footnote de 13 dp, com tracking negativo.
+- **Cor** de sistema: azul `#007AFF`, laranja `#FF9500`, verde `#34C759`,
+  vermelho `#FF3B30`, fundo de listas agrupadas `#F2F2F7` e separador de 0,5 dp.
+- **Chrome**: cabeçalho de título grande com botão circular cinza, tab bar de
+  49 dp com ícones de 25 dp e rótulos de 10 dp, sem pílula de seleção, e barra
+  de navegação compacta com botão “Voltar” em pílula nas telas internas.
+- **Listas agrupadas**: cartões brancos de 10 dp sem borda, cabeçalho de seção
+  em caixa-alta de 13 dp e rodapé explicativo, como os Ajustes.
+- **Controles**: botões cheios de 50 dp com cantos de 12 dp, botões tonalizado e
+  cinza, switch verde, slider de trilho fino, barra de progresso de 4 dp e
+  alertas centralizados com ações azuis.
+- **Aparência clara e escura**: a paleta de sistema tem as duas variantes
+  (`systemBlue #007AFF` / `#0A84FF`, fundo `#F2F2F7` / `#000000`, cartões
+  `#FFFFFF` / `#1C1C1E`), escolhidas por `isSystemInDarkTheme()`. As janelas
+  usam `values-night` (fundo preto e ícones claros nas barras de sistema), então
+  o app acompanha o tema do HyperOS sem precisar de ajuste interno.
+- **Sem ripple**: o indicador radial do Android foi desligado; botões e linhas
+  respondem escurecendo, como no iOS.
+
+O ícone é a arte da rede de neurônios em gradiente, distribuída como ícone
+adaptativo: uma camada de fundo de 108 dp inteira (a rede fica na zona segura,
+então nenhuma máscara de launcher a corta) e um ícone monocromático para os
+ícones temáticos. [tools/make_app_icon.py](tools/make_app_icon.py) regenera as
+camadas a partir da arte original.
 
 ## Instalação no Redmi Note 11S (HyperOS 1)
 
 Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 `minSdk 26`, `targetSdk 35` e `compileSdk 36`.
 
-1. Baixe
-   [FlyMind-1.2.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.2.0/FlyMind-1.2.apk)
-   e copie para o celular (cabo USB, Google Drive, Telegram etc.).
+1. Baixe o APK da
+   [release mais recente](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases)
+   (ou use o `Conectoma-1.3.apk` gerado localmente) e copie para o celular
+   (cabo USB, Google Drive, Telegram etc.).
 2. Abra o arquivo no gerenciador de arquivos e permita "instalar apps
    desconhecidos" para o app usado na instalação.
 3. Se o Play Protect avisar que o app não é reconhecido, escolha instalar
@@ -45,7 +72,7 @@ Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 4. Alternativa por USB, com depuração USB ativada:
 
 ```bash
-adb install -r FlyMind-1.0.apk
+adb install -r Conectoma-1.3.apk
 ```
 
 Para atualizar depois, o `versionCode` precisa ser maior ou o app precisa ser
@@ -112,7 +139,7 @@ O app usa o motor TTS do Android, sem nuvem:
 1. No HyperOS, instale/atualize o Google TTS em
    **Configurações > Idiomas e entrada > Saída de texto para fala**.
 2. Baixe as vozes desejadas (inclusive vozes neurais, se disponíveis).
-3. No FlyMind, aba **Voz**, escolha a voz, ajuste tom/velocidade e use
+3. No Conectoma, aba **Voz**, escolha a voz, ajuste tom/velocidade e use
    **Ouvir** para testar. A fala automática das respostas pode ser desligada.
 
 **2. Seu arquivo de voz (gerado por IA)**
@@ -132,16 +159,17 @@ a partir dele, o que exigiria um modelo de clonagem de voz embarcado.
 
 A integração é feita no que o Android permite a um app comum, sem root:
 
-- tema claro no estilo iOS, ícone monocromático para os ícones temáticos do
-  HyperOS e barras de sistema claras com ícones escuros;
+- tema claro e escuro no estilo iOS, seguindo o tema do sistema, ícone
+  monocromático para os ícones temáticos do HyperOS e barras de sistema
+  transparentes com ícones que se ajustam ao fundo;
 - tela cheia edge-to-edge;
 - atalhos que abrem as telas nativas de bateria, autostart e restrições de
   segundo plano da MIUI/HyperOS;
-- nenhum serviço em segundo plano, nenhuma permissão sensível e nenhum acesso
-  à internet;
+- nenhum serviço em segundo plano e nenhuma permissão sensível; a internet só
+  é usada para baixar a página que você cola na aba Ensinar;
 - opção de manter a tela ligada durante cadernos grandes.
 
-Se o HyperOS matar o app ao apagarem a tela, libere o FlyMind em
+Se o HyperOS matar o app ao apagarem a tela, libere o Conectoma em
 **Autostart**, **Economia de bateria** e **Restrições de segundo plano**. Os
 botões da aba **Sistema** abrem essas telas.
 
@@ -328,9 +356,15 @@ app/src/main/java/com/flymind/
   voice/VoiceEngine.kt     TTS, vozes e preferências
   voice/VoiceFilePlayer.kt importa e toca arquivo de voz (IA)
   ui/                      ViewModel, tema, componentes e telas Compose
+  ui/ios/Ios.kt            botões, campos, switch, slider, linhas e alerta iOS
+  ui/ios/IosChrome.kt      título grande, tab bar e barra de navegação iOS
+  ui/theme/Theme.kt        tokens, tipografia Inter e formas do iOS
+  res/font/inter_*.ttf     Inter (OFL) embarcada no APK
   hyperos/HyperOs.kt       detecção e atalhos MIUI/HyperOS
   util/ShareUtil.kt        exportação JSON
+app/src/main/res/mipmap-*/ic_launcher_bg.png  ícone adaptativo (5 densidades)
 tools/extract_connectome.py
+tools/make_app_icon.py   gera o ícone a partir da arte original
 app/src/main/assets/connectome/flywire_mb.bin
 ```
 
@@ -378,5 +412,10 @@ Os dados de conectividade são **CC-BY-4.0**. Cite:
    Drosophila*, Nature 2024.
    [doi:10.1038/s41586-024-07686-5](https://doi.org/10.1038/s41586-024-07686-5)
 
-O FlyMind não é afiliado ao consórcio FlyWire. O recorte, a simulação e o app
+O Conectoma não é afiliado ao consórcio FlyWire. O recorte, a simulação e o app
 são independentes.
+
+A fonte **Inter** está sob a SIL Open Font License 1.1
+([licenses/Inter-OFL.txt](licenses/Inter-OFL.txt)). A interface segue as
+convenções visuais do iOS; não usa SF Pro (licenciado só para plataformas da
+Apple) nem qualquer recurso proprietário da Apple.

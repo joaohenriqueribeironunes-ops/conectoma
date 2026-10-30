@@ -1,10 +1,10 @@
 package com.flymind.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -32,11 +32,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flymind.brain.SimTrace
+import com.flymind.ui.ios.IosDivider
+import com.flymind.ui.ios.IosSectionFooter
+import com.flymind.ui.ios.IosSectionHeader
 import com.flymind.ui.theme.Amber
 import com.flymind.ui.theme.Fill
+import com.flymind.ui.theme.FillStrong
 import com.flymind.ui.theme.Separator
 import com.flymind.ui.theme.Surface
-import com.flymind.ui.theme.SurfaceHigh
 import com.flymind.ui.theme.Teal
 import com.flymind.ui.theme.TextPrimary
 import com.flymind.ui.theme.TextSecondary
@@ -46,50 +49,77 @@ import java.util.Locale
 import kotlin.math.floor
 
 /**
- * Grupo no estilo iOS: cabeçalho de seção cinza em cima e cartão branco
- * arredondado embaixo, sem borda — como as listas agrupadas dos Ajustes.
+ * Grupo de lista agrupada do iOS: cabeçalho de 13 dp em cinza, cartão branco de
+ * 10 dp sem borda e, opcionalmente, rodapé explicativo. O conteúdo já vem com
+ * 14 dp de recuo, como as linhas dos Ajustes.
  */
 @Composable
 fun Panel(
     title: String? = null,
     subtitle: String? = null,
     modifier: Modifier = Modifier,
+    footer: String? = null,
+    contentPadding: Int = 14,
     content: @Composable () -> Unit,
 ) {
     Column(modifier.fillMaxWidth()) {
         if (title != null) {
-            Text(
-                title.uppercase(Locale("pt", "BR")),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.4.sp,
-                color = TextSecondary,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
-            )
+            IosSectionHeader(title)
         }
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            border = BorderStroke(0.5.dp, Separator.copy(alpha = 0.6f)),
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(Surface),
         ) {
-            Column(Modifier.padding(16.dp)) {
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp),
+                )
+            }
+            Column(Modifier.padding(horizontal = contentPadding.dp, vertical = 12.dp)) {
                 content()
             }
+        }
+        if (footer != null) {
+            IosSectionFooter(footer)
         }
     }
 }
 
-/** Controle segmentado iOS: pílula cinza com a opção ativa em cartão branco. */
+/** Cartão com linhas de lista: as linhas controlam o próprio espaçamento. */
+@Composable
+fun ListPanel(
+    title: String? = null,
+    footer: String? = null,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Column(modifier.fillMaxWidth()) {
+        if (title != null) {
+            IosSectionHeader(title)
+        }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(Surface),
+        ) {
+            content()
+            // O último separador da lista não aparece no iOS.
+            Box(Modifier.height(0.dp))
+        }
+        if (footer != null) {
+            IosSectionFooter(footer)
+        }
+    }
+}
+
+/** Controle segmentado do iOS: trilho cinza com a opção ativa em branco. */
 @Composable
 fun IosSegmented(
     options: List<String>,
@@ -100,7 +130,8 @@ fun IosSegmented(
     Row(
         modifier
             .fillMaxWidth()
-            .background(Fill, RoundedCornerShape(9.dp))
+            .clip(RoundedCornerShape(9.dp))
+            .background(Fill)
             .padding(2.dp),
     ) {
         options.forEachIndexed { index, label ->
@@ -108,10 +139,8 @@ fun IosSegmented(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .background(
-                        if (selected) Surface else Color.Transparent,
-                        RoundedCornerShape(7.dp),
-                    )
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(if (selected) Surface else Color.Transparent)
                     .then(
                         if (selected) {
                             Modifier.border(0.5.dp, Separator, RoundedCornerShape(7.dp))
@@ -119,14 +148,17 @@ fun IosSegmented(
                             Modifier
                         },
                     )
-                    .clickable { onSelect(index) }
-                    .padding(vertical = 7.dp),
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onSelect(index) }
+                    .padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     label,
                     fontSize = 13.sp,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (selected) TextPrimary else TextSecondary,
                 )
             }
@@ -134,36 +166,33 @@ fun IosSegmented(
     }
 }
 
+/** Indicador compacto de métrica, no tom de preenchimento do iOS. */
 @Composable
 fun MetricPill(label: String, value: String, color: Color = Teal) {
     Column(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+        Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 7.dp),
     ) {
-        Text(value, color = color, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-        Text(label, color = TextSecondary, fontSize = 10.sp)
+        Text(value, color = color, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        Text(label, color = TextSecondary, fontSize = 11.sp)
     }
 }
 
 @Composable
 fun StatBlock(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Text(
-            value,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 20.sp,
-            color = TextPrimary,
-        )
+        Text(value, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = TextPrimary)
         Text(
             label.uppercase(Locale("pt", "BR")),
-            fontSize = 10.sp,
-            letterSpacing = 0.4.sp,
+            fontSize = 11.sp,
             color = TextSecondary,
         )
     }
 }
 
+/** Barra de força: 5 dp, trilho cinza e preenchimento no acento. */
 @Composable
 fun StrengthBar(
     fraction: Float,
@@ -173,28 +202,32 @@ fun StrengthBar(
     Box(
         modifier
             .fillMaxWidth()
-            .height(6.dp)
-            .background(Fill, RoundedCornerShape(3.dp)),
+            .height(5.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(FillStrong),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                .height(6.dp)
-                .background(color, RoundedCornerShape(3.dp)),
+                .height(5.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(color),
         )
     }
 }
 
+/** Gráfico de atividade e dopamina desenhado sobre o cartão branco. */
 @Composable
 fun TraceChart(trace: SimTrace?, modifier: Modifier = Modifier) {
-    val grid = Separator
+    val grid = Separator.copy(alpha = 0.5f)
     val line = Teal
     val reward = Amber
     Canvas(
         modifier
             .fillMaxWidth()
             .height(120.dp)
-            .background(SurfaceHigh, RoundedCornerShape(10.dp)),
+            .clip(RoundedCornerShape(10.dp))
+            .background(Surface),
     ) {
         val activity = trace?.activity ?: FloatArray(0)
         val da = trace?.dopamine ?: FloatArray(0)
@@ -202,7 +235,7 @@ fun TraceChart(trace: SimTrace?, modifier: Modifier = Modifier) {
 
         for (i in 1..3) {
             val y = size.height * i / 4f
-            drawLine(grid, Offset(0f, y), Offset(size.width, y), 1f)
+            drawLine(grid, Offset(0f, y), Offset(size.width, y), 0.5f)
         }
 
         val maxActivity = activity.maxOrNull()?.coerceAtLeast(0.0001f) ?: 1f
@@ -227,6 +260,7 @@ fun TraceChart(trace: SimTrace?, modifier: Modifier = Modifier) {
     }
 }
 
+/** Raster de disparos: pontos de 1,1 px em azul translúcido. */
 @Composable
 fun SpikeRaster(trace: SimTrace?, modifier: Modifier = Modifier) {
     val spikeColor = Teal.copy(alpha = 0.55f)
@@ -234,7 +268,8 @@ fun SpikeRaster(trace: SimTrace?, modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(110.dp)
-            .background(SurfaceHigh, RoundedCornerShape(10.dp)),
+            .clip(RoundedCornerShape(10.dp))
+            .background(Surface),
     ) {
         if (trace == null || trace.rasterStep.isEmpty()) return@Canvas
         val maxStep = trace.rasterStep.maxOrNull()?.coerceAtLeast(1) ?: 1
@@ -252,11 +287,12 @@ fun LegendDot(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
-                .size(8.dp)
-                .background(color, RoundedCornerShape(4.dp)),
+                .size(9.dp)
+                .clip(RoundedCornerShape(5.dp))
+                .background(color),
         )
         Spacer(Modifier.width(6.dp))
-        Text(label, color = TextSecondary, fontSize = 11.sp)
+        Text(label, color = TextSecondary, fontSize = 13.sp)
     }
 }
 
@@ -267,13 +303,17 @@ fun HorizontalMetrics(items: List<Pair<String, String>>) {
     }
 }
 
+@Composable
+fun IosSeparatorRow() {
+    IosDivider(startIndent = 14.dp)
+}
+
 fun formatTime(epochMillis: Long): String {
     if (epochMillis <= 0L) return "nunca"
     val format = SimpleDateFormat("dd/MM/yy HH:mm", Locale("pt", "BR"))
     return format.format(Date(epochMillis))
 }
 
-/** "1:04" para duração de arquivo de áudio. */
 fun formatDuration(millis: Long): String {
     if (millis <= 0L) return "0:00"
     val total = floor(millis / 1000.0).toLong()

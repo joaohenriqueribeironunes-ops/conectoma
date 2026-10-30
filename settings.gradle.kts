@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FlyMind"
+rootProject.name = "Conectoma"
 include(":app")

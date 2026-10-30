@@ -8,7 +8,7 @@ import java.io.File
 object ShareUtil {
 
     fun shareMemories(context: Context, json: String) {
-        val file = File(context.cacheDir, "memorias_flymind.json")
+        val file = File(context.cacheDir, "memorias_conectoma.json")
         file.writeText(json)
         val uri = runCatching {
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -18,13 +18,13 @@ object ShareUtil {
             Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Memórias do FlyMind")
+                putExtra(Intent.EXTRA_SUBJECT, "Memórias do Conectoma")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
         } else {
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "Memórias do FlyMind")
+                putExtra(Intent.EXTRA_SUBJECT, "Memórias do Conectoma")
                 putExtra(Intent.EXTRA_TEXT, json)
             }
         }

@@ -65,7 +65,7 @@ object WebSource {
         connection.instanceFollowRedirects = true
         connection.setRequestProperty(
             "User-Agent",
-            "FlyMind/1.2 (aprendizado de páginas; sem telemetria)",
+            "Conectoma/1.3 (aprendizado de páginas; sem telemetria)",
         )
         connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,text/plain")
 

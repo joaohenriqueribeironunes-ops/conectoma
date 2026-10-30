@@ -576,7 +576,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun testVoice(text: String) {
-        speakOrPlay(text.ifBlank { "Olá. Eu sou a mosca do FlyMind." })
+        speakOrPlay(text.ifBlank { "Olá. Eu sou a mosca do Conectoma." })
     }
 
     fun stopVoice() {
@@ -647,7 +647,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         return JSONObject()
-            .put("app", "FlyMind")
+            .put("app", "Conectoma")
             .put("dataset", "FlyWire FAFB v783 (CC-BY-4.0)")
             .put("exportedAt", System.currentTimeMillis())
             .put("facts", array)

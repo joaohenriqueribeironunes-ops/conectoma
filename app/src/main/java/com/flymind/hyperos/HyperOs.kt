@@ -64,7 +64,7 @@ object HyperOs {
                 "com.miui.powerkeeper.ui.HiddenAppsConfigActivity",
             ),
         ).putExtra("package_name", context.packageName)
-            .putExtra("package_label", "FlyMind")
+            .putExtra("package_label", "Conectoma")
         return start(context, intent) || openBatterySettings(context)
     }
 
