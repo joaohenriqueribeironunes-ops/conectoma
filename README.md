@@ -7,11 +7,12 @@ recebe pulsos de dopamina computadorizada e tem os pesos sinápticos alterados
 por STDP de três fatores. As memórias ficam numa base SQLite local e podem ser
 consultadas por pergunta.
 
-O APK da versão atual é `FlyMind-1.2.apk` (18 MB, assinado com a chave de debug
-do Android), gerado por `./gradlew :app:assembleDebug`. A release
-[v1.0.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.0.0)
-ainda serve o APK antigo. Os `.apk` não são versionados — o `.gitignore` os
-exclui.
+O APK da versão atual está na release
+[v1.2.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.2.0)
+(`FlyMind-1.2.apk`, 18 MB, `versionCode 3`, assinado com a chave de debug do
+Android). SHA-256:
+`fae8bec6672512f10334d7e5fe3af1ae987e062fd0d2d920e0e2e42e9c22ec51`. Os `.apk`
+não são versionados — o `.gitignore` os exclui — só ficam na release.
 
 ## O que o app faz
 
@@ -33,8 +34,9 @@ de abas no rodapé com ação azul e barras de sistema claras com ícones escuro
 Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 `minSdk 26`, `targetSdk 35` e `compileSdk 36`.
 
-1. Baixe `FlyMind-1.2.apk` (ou o APK anexado na release mais recente) e copie
-   para o celular (cabo USB, Google Drive, Telegram etc.).
+1. Baixe
+   [FlyMind-1.2.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.2.0/FlyMind-1.2.apk)
+   e copie para o celular (cabo USB, Google Drive, Telegram etc.).
 2. Abra o arquivo no gerenciador de arquivos e permita "instalar apps
    desconhecidos" para o app usado na instalação.
 3. Se o Play Protect avisar que o app não é reconhecido, escolha instalar
