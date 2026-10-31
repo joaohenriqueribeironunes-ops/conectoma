@@ -63,4 +63,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: out/*.apk
+          name: Conectoma 2.0
+          tag_name: v2.0.0
           generate_release_notes: true
