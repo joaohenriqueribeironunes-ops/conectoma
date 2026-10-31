@@ -61,7 +61,10 @@ class MiniLlmEngine(
 
     private fun gaussian(): Float = rng.nextFloat() * 0.08f - 0.04f
 
-    private fun attnW(l: Int, k: Int, i: Int, j: Int): Float = attn[l * 4 * dim * dim + k * dim * dim + i * dim + j]
+    private fun attnW(l: Int, k: Int, i: Int, j: Int): Float {
+        val a = attn[l]
+        return a[k * dim * dim + i * dim + j]
+    }
 
     private fun attnWArr(l: Int, k: Int): FloatArray = FloatArray(dim * dim) { attnW(l, k, it / dim, it % dim) }
 
@@ -142,7 +145,7 @@ class MiniLlmEngine(
             val p = (startPos + i).coerceIn(0, maxSeq - 1)
             for (d in 0 until dim) x[i * dim + d] = embed[t][d] + pos[p][d]
         }
-        for (l in layers.indices) {
+        for (l in 0 until layers) {
             val st = states[l]
             st.x = x.copyOf()
             val q = batchMatVec(attnWArr(l, 0), x, n, dim, dim)
@@ -355,7 +358,7 @@ class MiniLlmEngine(
     }
 
     private fun sgd() {
-        for (l in layers.indices) {
+        for (l in 0 until layers) {
             for (i in 0 until 4 * dim * dim) attn[l][i] -= learningRate * gAttn[l][i]
             for (i in 0 until dim * ffnDim) ffnW1[l][i] -= learningRate * gW1[l][i]
             for (i in 0 until ffnDim * dim) ffnW2[l][i] -= learningRate * gW2[l][i]
@@ -402,18 +405,18 @@ class MiniLlmEngine(
     }
 
     private fun sample(probs: FloatArray, temperature: Float): Int {
-        val weights = FloatArray(probs.size) { if (probs[it] > 0.0001f) pow(probs[it].toDouble(), temperature.toDouble()).toFloat() else 0f }
+        val weights = FloatArray(probs.size) { if (probs[it] > 0.0001f) java.lang.Math.pow(probs[it].toDouble(), temperature.toDouble()).toFloat() else 0f }
         val total = weights.sum()
-        var r = kotlin.math.random().toFloat() * total
+        var r = rng.nextDouble().toFloat() * total
         var acc = 0f
-        for (i in weights.indices) {
+        for (i in 0 until weights.size) {
             acc += weights[i]
             if (r <= acc) return i
         }
-        return weights.lastIndex
+        return weights[weights.size - 1]
     }
 
-    fun respond(inputIds: IntArray, maxNewTokens: Int = 10, temperature: Float = 0.9): String {
+    fun respond(inputIds: IntArray, maxNewTokens: Int = 10, temperature: Float = 0.9f): String {
         var seq = IntArray(inputIds.size) { inputIds[it].coerceIn(0, vocabSize - 1) }
         val words = ArrayList<String>()
         for (t in 0 until maxNewTokens) {
