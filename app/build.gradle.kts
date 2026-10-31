@@ -16,10 +16,31 @@ android {
         versionName = "1.6"
     }
 
+    signingConfigs {
+        // Assinatura de release. Aceita uma keystore propria via variaveis de
+        // ambiente (CI/secrets); sem elas, cai na debug keystore do usuario,
+        // que ja basta para instalar o APK fora da Play Store.
+        release {
+            val storePath = System.getenv("CONNECTOMA_KEYSTORE")
+            if (storePath != null) {
+                storeFile file(storePath)
+                storePassword System.getenv("CONNECTOMA_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("CONNECTOMA_KEY_ALIAS")
+                keyPassword System.getenv("CONNECTOMA_KEY_PASSWORD")
+            } else {
+                storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig signingConfigs.release
         }
     }
 
