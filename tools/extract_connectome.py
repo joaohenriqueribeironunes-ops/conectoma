@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extrai um subcircuito de aprendizado do conectoma FlyWire FAFB v783.
+"""Extrai o cérebro de aprendizado do conectoma FlyWire FAFB v783.
 
 Entrada esperada (downloads publicas, CC-BY-4.0):
   nodes.parquet        -> 139.255 neuronios anotados (Schlegel et al. 2024)
@@ -9,11 +9,14 @@ Saida:
   app/src/main/assets/connectome/flywire_mb.bin   (asset binario lido pelo app)
   tools/connectome_stats.json                     (relatorio da extracao)
 
-O subcircuito selecionado e o sistema de aprendizado da mosca:
-  - Corpos pedunculados (Kenyon cells, MBON, MBIN)
-  - Neurônios dopaminergicos (DAN / PAM / PPL1) = recompensa
-  - Vias sensoriais de entrada (ALPN, olfatorio, mecanossensorial, gustativo)
-  - Complexo central (CX) e neuronios descendentes/motores = saida
+O cérebro carrega a rede de aprendizado da mosca a partir das conexoes completas
+com um corte superior de metade: apenas pares dirigidos com >= 2 sinapses entram
+no universo de aprendizado (a metade inferior da conexao e considerada ruim demais
+para a plasticidade inicial).
+
+O cérebro preserva os componentes de recompensa (dopamina), plasticidade
+(corpos pedunculados Kenyon) e associacao sensorial/complexo central/motores que
+sustentam a aprendizagem autonoma da mosca.
 
 Uso:
   python tools/extract_connectome.py \
@@ -182,7 +185,7 @@ def role_of(table: dict, i: int) -> int:
 
 
 def collect_edges(connections_path: str, ids: set[int], min_syn: int, batch_size: int = 1_000_000):
-    """Le connections.parquet em blocos e mantem apenas arestas internas ao subcircuito."""
+    """Le connections.parquet em blocos e mantem apenas arestas com o limiar exigido."""
     pf = pq.ParquetFile(connections_path)
     value_set = pa.array(sorted(ids), type=pa.int64())
     pres: list[np.ndarray] = []
@@ -318,7 +321,7 @@ def main() -> int:
     ap.add_argument("--connections", default=os.path.join(os.path.expanduser("~"), "Downloads", "connections.parquet"))
     ap.add_argument("--out", default=os.path.join(root, "app", "src", "main", "assets", "connectome", "flywire_mb.bin"))
     ap.add_argument("--stats", default=os.path.join(root, "tools", "connectome_stats.json"))
-    ap.add_argument("--min-syn", type=int, default=5, help="limiar de sinapses por aresta (FAFB usa 5)")
+    ap.add_argument("--min-syn", type=int, default=2, help="limiar de sinapses por aresta (corte da metade das conexoes: pares com >= 2 sinapses)")
     ap.add_argument("--max-out", type=int, default=90, help="teto de grau de saida por neuronio")
     ap.add_argument("--max-edges", type=int, default=120000, help="teto de arestas no asset")
     ap.add_argument("--seed", type=int, default=42)
@@ -329,10 +332,11 @@ def main() -> int:
             raise SystemExit(f"arquivo nao encontrado: {name} em {path}")
 
     table = load_nodes(args.nodes)
-    log("selecionando neuronios do subcircuito de aprendizado")
-    indices = select_neurons(table, args.seed)
+    log(f"universo completo de neuronios: {len(table['root_id'])}")
+    log(f"corte superior: apenas pares com >= {args.min_syn} sinapses (aproximadamente a metade das conexoes)")
+    indices = list(range(len(table["root_id"])))
     ids = [int(table["root_id"][i]) for i in indices]
-    log(f"selecionados {len(ids)} neuronios")
+    log(f"neuronios no universo de conexoes: {len(ids)}")
 
     log("varrendo connections.parquet (15M de linhas)")
     pre, post, syn = collect_edges(args.connections, set(ids), args.min_syn)
