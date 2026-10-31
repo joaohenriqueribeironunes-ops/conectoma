@@ -11,14 +11,11 @@ ensinadas.
 
 O app se chama **Conectoma** desde a versão 1.3 (antes era FlyMind). O APK
 atual está na release
-[v1.5.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.5.0)
-(`Conectoma-1.5.apk`, 20 MB, `versionCode 6`, assinado com a chave de debug do
+[v1.6.0](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/tag/v1.6.0)
+(`Conectoma-1.6.apk`, 19,9 MB, `versionCode 7`, assinado com a chave de debug do
 Android). SHA-256:
-`8d806b5d0c9448177a04d8447e8f00a277697ff0ca4b8e64046590c2a8575903`. Os `.apk`
+`7607010cac8255025ae2ecb1a9d796b99b60ba031a39632cc884aa7d21f2d1d9`. Os `.apk`
 não são versionados — o `.gitignore` os exclui — só ficam na release.
-
-O código deste repositório está na versão **1.6**, com plasticidade acumulada e
-resposta livre; ela ainda não foi publicada. O APK 1.5 é o que está na release.
 
 ## O que o app faz
 
@@ -66,7 +63,7 @@ Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 `minSdk 26`, `targetSdk 35` e `compileSdk 36`.
 
 1. Baixe
-   [Conectoma-1.5.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.5.0/Conectoma-1.5.apk)
+   [Conectoma-1.6.apk](https://github.com/joaohenriqueribeironunes-ops/conectoma/releases/download/v1.6.0/Conectoma-1.6.apk)
    e copie para o celular (cabo USB, Google Drive, Telegram etc.).
 2. Abra o arquivo no gerenciador de arquivos e permita "instalar apps
    desconhecidos" para o app usado na instalação.
@@ -76,7 +73,7 @@ Requisitos: Android 8.0 (API 26) ou superior. O APK foi compilado com
 4. Alternativa por USB, com depuração USB ativada:
 
 ```bash
-adb install -r Conectoma-1.5.apk
+adb install -r Conectoma-1.6.apk
 ```
 
 Para atualizar depois, o `versionCode` precisa ser maior ou o app precisa ser
