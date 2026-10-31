@@ -307,9 +307,12 @@ private fun ChatBubble(
                 .background(if (message.fromUser) Teal else FillStrong)
                 .padding(horizontal = 13.dp, vertical = 9.dp),
         ) {
-            if (message.source != null) {
+            val label = message.sources.ifEmpty {
+                listOfNotNull(message.source).filter { it.isNotBlank() }
+            }
+            if (label.isNotEmpty()) {
                 Text(
-                    message.source.orEmpty(),
+                    label.joinToString(" · "),
                     fontSize = 11.sp,
                     color = if (message.fromUser) Color.White.copy(alpha = 0.8f) else TextSecondary,
                     fontWeight = FontWeight.SemiBold,
@@ -323,6 +326,29 @@ private fun ChatBubble(
                 letterSpacing = (-0.2).sp,
                 color = if (message.fromUser) Color.White else TextPrimary,
             )
+            if (!message.fromUser && message.linked.isNotEmpty()) {
+                Spacer(Modifier.height(9.dp))
+                Text(
+                    "LIGADA POR",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    message.linked.take(4).forEach { term ->
+                        Text(
+                            term,
+                            fontSize = 12.sp,
+                            color = Teal,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(Teal.copy(alpha = 0.10f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+            }
             if (!message.fromUser && message.related.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 Text("CONECTA COM", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)

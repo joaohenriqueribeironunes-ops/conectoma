@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flymind.brain.DEFAULT_TRIALS
 import com.flymind.ui.FlyUiState
 import com.flymind.ui.LegendDot
 import com.flymind.ui.MetricPill
@@ -150,6 +151,69 @@ fun BrainScreen(
 
         item {
             Panel(
+                title = "Neuroplasticidade acumulada",
+                footer = "Cada aprendizado fortalece as sinapses do caminho daquela memória e eleva a " +
+                    "facilidade de aprender. O ganho total passa por escalonamento homeostático, para o " +
+                    "circuito não saturar.",
+            ) {
+                if (status == null) {
+                    Text("Sem dados do circuito.", color = TextSecondary, fontSize = 15.sp)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    "${(status.expertise * 100).toInt()}%",
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.3).sp,
+                                    color = Teal,
+                                )
+                                Text(
+                                    "facilidade de aprender",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary,
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    "${status.strengthened}",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Amber,
+                                )
+                                Text(
+                                    "sinapses fortalecidas",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary,
+                                )
+                            }
+                        }
+                        IosProgress(progress = status.expertise, tint = Teal)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MetricPill("consolidadas", "${status.learnings}")
+                            MetricPill("lembranças", "${status.recalls}")
+                            MetricPill("ensaios por fato", "${status.trialsNow}", Amber)
+                        }
+                        Text(
+                            if (status.trialsNow < DEFAULT_TRIALS) {
+                                "Ela já aprende um fato novo com ${status.trialsNow} ensaios; antes eram " +
+                                    "$DEFAULT_TRIALS. Lembrar de algo também reconsolida a memória."
+                            } else {
+                                "Começando: cada fato novo pede $DEFAULT_TRIALS ensaios. Conforme aprende, " +
+                                    "esse número cai e as conexões ficam mais fortes."
+                            },
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            color = TextSecondary,
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Panel(
                 title = "Atividade do circuito",
                 footer = "Estimulação espontânea por 1,4 segundo, sem recompensa.",
             ) {
@@ -207,8 +271,10 @@ fun BrainScreen(
                         color = TextSecondary,
                     )
                     Text(
-                        "Ela não entende linguagem livre como um LLM. Ela associa a assinatura de disparo " +
-                            "da pergunta aos fatos que você ensinou e responde com a memória mais próxima.",
+                        "Ela não gera texto livre como um LLM. Ela associa a assinatura de disparo da " +
+                            "pergunta aos fatos ensinados, expande a pergunta com as palavras vizinhas do " +
+                            "vocabulário dela (cosseno de contexto) e costura as memórias mais próximas " +
+                            "numa resposta só. Tudo o que ela diz veio de algo que você ensinou.",
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
                         color = Teal,

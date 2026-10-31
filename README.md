@@ -1,11 +1,13 @@
-# Conectoma 1.5
+# Conectoma 1.6
 
 Aplicativo Android nativo que usa um recorte real do conectoma da mosca
 (*Drosophila melanogaster*, FlyWire FAFB v783) como circuito de aprendizagem.
 Você ensina fatos em texto, o circuito recebe estimulação sensorial, dispara,
 recebe pulsos de dopamina computadorizada e tem os pesos sinápticos alterados
-por STDP de três fatores. As memórias ficam numa base SQLite local e podem ser
-consultadas por pergunta.
+por STDP de três fatores. Cada aprendizado fortalece o caminho daquela memória
+e a deixa mais rápida de aprender. As memórias ficam numa base SQLite local e
+podem ser consultadas por pergunta, inclusive fora do padrão em que foram
+ensinadas.
 
 O app se chama **Conectoma** desde a versão 1.3 (antes era FlyMind). O APK
 atual está na release
@@ -15,15 +17,18 @@ Android). SHA-256:
 `8d806b5d0c9448177a04d8447e8f00a277697ff0ca4b8e64046590c2a8575903`. Os `.apk`
 não são versionados — o `.gitignore` os exclui — só ficam na release.
 
+O código deste repositório está na versão **1.6**, com plasticidade acumulada e
+resposta livre; ela ainda não foi publicada. O APK 1.5 é o que está na release.
+
 ## O que o app faz
 
 | Aba | Função |
 |---|---|
 | **Ensinar** | Ensina um fato (tema, pergunta, resposta), um caderno inteiro ou uma **página da web pela URL**, com 3 a 12 ensaios por trecho. Mostra disparos, dopamina, estabilidade do engrama e mudança de peso. |
-| **Conversar** | Pergunta em texto. A mosca responde só com fatos que aprendeu; se não souber, diz que não aprendeu. Exibe confiança, similaridade do engrama e as **conexões divergentes** que a pergunta despertou. |
+| **Conversar** | Pergunta em texto, no padrão ou não. A mosca conecta palavras vizinhas do próprio vocabulário, costura as memórias ligadas numa resposta e mostra de onde veio cada trecho; se não souber, diz que não aprendeu. Exibe confiança, similaridade do engrama, os termos que ligaram a pergunta à memória e as **conexões divergentes**. |
 | **Memória** | Lista as memórias, permite reconsolidar (treinar de novo), apagar, limpar tudo e exportar JSON. |
 | **Voz** | Escolhe qualquer voz TTS instalada no aparelho ou importa um **arquivo de voz pronto** (gerado por IA), ajusta tom e velocidade, liga a fala automática e testa. |
-| **Cérebro** | Estatísticas do conectoma, raster de disparos, plasticidade acumulada, estimulação espontânea e restauração dos pesos originais. |
+| **Cérebro** | Estatísticas do conectoma, raster de disparos, plasticidade sináptica, facilidade de aprender (sinapses fortalecidas, ensaios que ainda precisa por fato), estimulação espontânea e restauração dos pesos originais. |
 | **Sistema** | Aparelho/Android/HyperOS detectados, atalhos para bateria, autostart e restrições da MIUI/HyperOS, e opção de manter a tela ligada. |
 
 A interface segue a linguagem visual do iOS, não o Material:
@@ -220,8 +225,16 @@ KCs e registra a correção em [extract_connectome.py](tools/extract_connectome.
   dopamina, serotonina e octopamina modulatórias (não propagam potencial).
 - **STDP de três fatores**: pares pré/pós dentro de 25 ms geram elegibilidade
   (`A+ = A- = 0,9`, `tau = 18 ms`); a elegibilidade decai com `tau = 260 ms`.
-  Um pulso de dopamina converte elegibilidade em mudança de peso
-  (`taxa = 0,035`, peso limitado a 0,45×–1,75× do original).
+  Um pulso de dopamina converte elegibilidade em mudança de peso (`taxa base =
+  0,035`, multiplicada por até 1,6 com a experiência). O peso fica entre 0,45× e
+  1,75× do original, e esse teto sobe até 2,6× conforme ela aprende.
+- **Consolidação estrutural**: além do STDP, cada aprendizado soma força às
+  sinapses excitatórias que o caminho daquela memória percorre (entrada →
+  interneurônios → saída), proporcional à estabilidade entre os ensaios. É o
+  traço de longa duração: vale mesmo quando o STDP daquela passagem foi ruidoso.
+- **Escalonamento homeostático**: se a soma dos pesos cresce mais de 35% acima
+  do original, todos descem na mesma proporção. O circuito não satura e o padrão
+  relativo das memórias é preservado.
 - Recompensa: cada ensaio agenda 3 pulsos; a dopamina é um escalar global que
   também estimula os 331 DANs. Não há codificação por compartimento.
 - **Engrama de 512 dimensões**: 80% da assembleia estrutural de KCs
@@ -230,20 +243,65 @@ KCs e registra a correção em [extract_connectome.py](tools/extract_connectome.
 - Texto vira um padrão determinístico de 60 canais sensoriais por hash FNV-1a
   com código distribuído (palavras + pares de palavras). Não há embeddings.
 
+### Plasticidade acumulada
+
+[Plasticity.kt](app/src/main/java/com/flymind/brain/Plasticity.kt) guarda o que
+já foi aprendido e transforma isso em facilidade de aprender, em 0..1:
+
+```text
+experiência = aprendizados + 0,5 × reconsolidações + 0,15 × lembranças
+facilidade  = 1 - e^(-experiência / 20)
+ensaios     = arredonda(6 × (1 - 0,5 × facilidade)), no mínimo 2
+```
+
+Portanto cada aprendizado tem três efeitos: reforça as sinapses daquele caminho,
+aumenta o ganho de dopamina por pulso (metaplasticidade) e reduz os ensaios que
+o próximo fato exige. O estado fica em `files/plasticity.txt` e sobrevive ao
+fechamento do app.
+
 ### Recuperação
 
 A pergunta atual é codificada, o circuito roda 160 ms e produz um engrama. Cada
 fato guardado é comparado por:
 
 ```text
-score = 0,60 × similaridade lexical + 0,40 × similaridade de engrama calibrada
+score = (0,40 × lexical + 0,22 × semântica + 0,38 × engrama calibrado)
+        × (0,8 + 0,2 × força da memória)
 ```
 
-A similaridade lexical combina Jaccard de termos, cobertura da pergunta e
-trigramas de caracteres. A similaridade de engrama é calibrada para que
-assembleias distantes não contem. A resposta é aceita se `score >= 0,42` ou se
-a similaridade lexical for `>= 0,55`. Caso contrário, o app responde que ainda
-não aprendeu.
+- **Lexical**: Jaccard de termos, cobertura da pergunta e trigramas de caracteres.
+- **Semântica**: fração dos conceitos da pergunta presentes no fato, aceitando
+  uma palavra vizinha no lugar da exata, com crédito proporcional ao cosseno
+  entre elas.
+- **Engrama**: cosseno entre a assinatura de disparo atual e a guardada,
+  calibrado para que assembleias distantes não contem (`(cosseno - 0,35) / 0,65`).
+- **Força**: memórias mais consolidadas vencem empates.
+
+A resposta é aceita se `score >= 0,42 - 0,10 × facilidade` (nunca abaixo de 0,30)
+ou se a similaridade lexical for `>= 0,55`. Caso contrário, o app responde que
+ainda não aprendeu. Quando aceita, a memória é reconsolidada: o caminho ganha
+força de novo e a contagem de lembranças sobe.
+
+### Vocabulário e resposta livre
+
+[SemanticSpace.kt](app/src/main/java/com/flymind/brain/SemanticSpace.kt) monta, a
+cada pergunta, um espaço vetorial sobre **as palavras das memórias que ela já
+tem** — nada é baixado nem pré-treinado:
+
+- cada palavra vira um vetor das palavras que aparecem perto dela (janela de 3,
+  pesada pela distância), mais uma coocorrência fraca (0,35) entre as palavras
+  da mesma memória curta (até 60 termos);
+- a proximidade entre duas palavras é o cosseno dos vetores;
+- os vizinhos da pergunta que ainda não estão nela entram como expansão
+  (proximidade `>= 0,18`), o que deixa a consulta sair da formulação exata;
+- a bolha mostra **LIGADA POR** com os termos que realmente apareceram nas
+  memórias usadas.
+
+[Composition.kt](app/src/main/java/com/flymind/brain/Composition.kt) costura a
+resposta: parte da memória mais próxima, junta até duas outras que tenham pelo
+menos 55% da pontuação dela e as liga com um conectivo escolhido pelo hash da
+pergunta, para não repetir sempre o mesmo. Nenhuma frase é gerada — cada uma vem
+de um fato ensinado — e o app prefere dizer que não sabe a inventar.
 
 ### Conexões divergentes
 
@@ -276,6 +334,9 @@ nada tiver conceito em comum, o app não inventa ligação — a lista fica vazi
   dopamina e tamanho da assembleia.
 - Os pesos plásticos são salvos em `files/connectome_weights.bin` e recarregados
   na abertura.
+- A plasticidade acumulada (aprendizados, reconsolidações, lembranças e
+  potenciação) fica em `files/plasticity.txt`, em formato `chave=valor`, e é
+  recarregada junto com o snapshot.
 - **Memória** → exportar gera `memorias_flymind.json` com todos os fatos e
   engramas via compartilhamento do Android.
 - Limpar tudo apaga fatos, eventos e o snapshot de pesos.
@@ -302,7 +363,7 @@ Saída: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Testes
 
-`./gradlew :app:testDebugUnitTest` roda 11 testes JVM, todos passando:
+`./gradlew :app:testDebugUnitTest` roda 19 testes JVM, todos passando:
 
 - carga do asset real, contagens e 512 dimensões de leitura;
 - estimulação produz disparos, engrama e mudança de peso;
@@ -316,7 +377,21 @@ Saída: `app/build/outputs/apk/debug/app-debug.apk`.
 - decodificação de entidades, normalização de URL sem esquema e recusa de `ftp`;
 - dois fatos de biologia se conectam por ideias em comum e o fato de futebol
   não é ligado a eles;
-- a consulta devolve conexões divergentes sem repetir a resposta direta.
+- a consulta devolve conexões divergentes sem repetir a resposta direta;
+- cada aprendizado fortalece sinapses e soma experiência (670 sinapses
+  fortalecidas já no primeiro fato, facilidade 0,049);
+- depois de 6 fatos ela passa a aprender com 5 ensaios em vez de 6 (facilidade
+  0,259) e o teto de peso sobe acima do original;
+- a facilidade e a contagem de lembranças sobrevivem ao fechamento do app, e o
+  reset zera pesos, experiência e ensaios;
+- o vocabulário aproxima palavras que dividem contexto (vizinhos de
+  "fotossíntese" incluem "luz"; a expansão de uma pergunta sobre a planta traz
+  "clorofila") e a sobreposição semântica do fato certo deu 0,69 contra 0,00 do
+  fato de futebol;
+- a resposta livre costura duas memórias de biologia, com espaço correto entre as
+  frases, e não puxa o fato de futebol;
+- pergunta fora do padrão recebe resposta composta pelo conectoma (score 0,74;
+  lexical 0,66; semântica 0,80).
 
 Medições do teste de treino (JVM, não no celular): 67.380 disparos, 15 pulsos de
 dopamina, estabilidade 0,993 e mudança média de peso de 12,0%.
@@ -350,6 +425,9 @@ app/src/main/java/com/flymind/
   brain/TextCode.kt        codificação de texto, similaridade, parser do caderno
   brain/LearningEngine.kt  treino, recuperação, snapshot de pesos
   brain/Concepts.kt        ideias, ligações entre fatos e associação divergente
+  brain/Plasticity.kt      experiência, facilidade de aprender e persistência
+  brain/SemanticSpace.kt   vocabulário vetorial, vizinhos e expansão da pergunta
+  brain/Composition.kt     costura de memórias na resposta livre
   brain/WebSource.kt       busca da página e extração de trechos aprendíveis
   data/                    modelos e SQLite
   voice/VoiceEngine.kt     TTS, vozes e preferências
@@ -380,8 +458,15 @@ app/src/main/assets/connectome/flywire_mb.bin
   por reforço de tentativa e erro, não navega em links e não escolhe temas por
   conta própria.
 - **Não é um LLM.** As respostas são recuperação associativa de fatos
-  ensinados, não geração livre. Paráfrases com as mesmas palavras-chave
-  funcionam; sinônimos sem sobreposição lexical podem falhar.
+  ensinados, não geração livre: o app escolhe, ordena e liga trechos que você
+  ensinou. A semântica vem de coocorrência no vocabulário próprio, então um
+  sinônimo só é reconhecido se as duas palavras aparecerem em contextos
+  parecidos nas memórias; sinônimos que nunca coocorreram podem falhar.
+- **A plasticidade é uma analogia quantitativa.** O ganho de peso por
+  aprendizado, o teto que cresce e o escalonamento homeostático reproduzem
+  tendências reais (LTP, metaplasticidade, homeostase sináptica), mas com
+  constantes escolhidas para estabilidade num celular — não são medidas
+  fisiológicas da mosca.
 - **O engrama é uma assinatura engenheirada.** 80% dele vem da estrutura
   recrutada pelas sinapses; 20% vem da atividade observada. Não é uma leitura
   literal e completa do padrão de spikes.

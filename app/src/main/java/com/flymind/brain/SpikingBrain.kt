@@ -61,6 +61,15 @@ class SpikingBrain(
     var dopamine: Float = 0f
         private set
 
+    /**
+     * Ajustes de metaplasticidade vindos de [Plasticity]: quanto a mosca já
+     * aprendeu muda o ganho por pulso de dopamina, o teto de fortalecimento de
+     * cada sinapse e o quanto a consolidação estrutural soma.
+     */
+    var metaplasticity: Float = 0f
+    var weightCapFactor: Float = MAX_WEIGHT_FACTOR
+    var learningRateFactor: Float = 1f
+
     private val rasterNeuron = IntArray(MAX_RASTER)
     private val rasterStep = IntArray(MAX_RASTER)
     private var rasterCount = 0
@@ -240,6 +249,65 @@ class SpikingBrain(
 
     fun baselineWeights(): FloatArray = baseline
 
+    /**
+     * Consolidação estrutural do caminho da memória (entrada → interneurônios →
+     * saída): cada aprendizado soma força às sinapses excitatórias que essa
+     * memória percorre. É a captura do traço de longa duração — vale mesmo
+     * quando o STDP daquela passagem foi ruidoso, e é o que faz a mesma memória
+     * ser recrutada com menos ensaios da próxima vez.
+     */
+    fun consolidate(pattern: IntArray, gain: Float): Int {
+        if (pattern.isEmpty() || gain <= 0f) return 0
+        val boost = gain * (1f + CONSOLIDATION_BOOST * metaplasticity)
+        val touched = HashSet<Int>()
+        for (pre in pattern) {
+            if (pre !in 0 until n) continue
+            var e = graph.outStart[pre]
+            val end = graph.outStart[pre + 1]
+            while (e < end) {
+                if (graph.outSign[e] > 0) {
+                    val base = baseline[e]
+                    val cap = base * weightCapFactor
+                    if (weights[e] < cap) {
+                        weights[e] = (weights[e] + boost * base).coerceAtMost(cap)
+                        touched.add(e)
+                    }
+                }
+                e++
+            }
+        }
+        if (touched.isNotEmpty()) scaleHomeostatic()
+        return touched.size
+    }
+
+    /** Sinapses que ficaram acima do peso original do FlyWire. */
+    fun strengthenedSynapses(): Int {
+        var count = 0
+        for (e in 0 until edgeCount) {
+            if (weights[e] > baseline[e] * STRENGTHENED_MARGIN) count++
+        }
+        return count
+    }
+
+    /**
+     * Escalonamento homeostático: se a excitação total cresceu demais, todos os
+     * pesos descem na mesma proporção. Mantém o circuito longe da saturação sem
+     * apagar o padrão relativo que as memórias construíram.
+     */
+    private fun scaleHomeostatic() {
+        var sum = 0f
+        var base = 0f
+        for (e in 0 until edgeCount) {
+            sum += weights[e]
+            base += baseline[e]
+        }
+        if (base <= 1e-6f) return
+        val ratio = sum / base
+        if (ratio <= HOMEOSTASIS_LIMIT) return
+        val factor = HOMEOSTASIS_LIMIT / ratio
+        for (e in 0 until edgeCount) weights[e] *= factor
+    }
+
     private fun stepOnce(): Int {
         time++
         dopamine *= DA_DECAY
@@ -337,8 +405,8 @@ class SpikingBrain(
                 continue
             }
             val base = baseline[e]
-            val delta = DA_LEARNING_RATE * dopamine * eff
-            weights[e] = (weights[e] + delta).coerceIn(base * MIN_WEIGHT_FACTOR, base * MAX_WEIGHT_FACTOR)
+            val delta = DA_LEARNING_RATE * learningRateFactor * dopamine * eff
+            weights[e] = (weights[e] + delta).coerceIn(base * MIN_WEIGHT_FACTOR, base * weightCapFactor)
             eligibility[e] = eff * 0.5f
             eligibilityAt[e] = time
         }
@@ -371,6 +439,9 @@ class SpikingBrain(
 
         const val MIN_WEIGHT_FACTOR = 0.45f
         const val MAX_WEIGHT_FACTOR = 1.75f
+        const val CONSOLIDATION_BOOST = 1.4f
+        const val HOMEOSTASIS_LIMIT = 1.35f
+        const val STRENGTHENED_MARGIN = 1.02f
         const val ENGRAM_DECAY = 0.995f
         const val MAX_RASTER = 1200
     }

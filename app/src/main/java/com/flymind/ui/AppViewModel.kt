@@ -46,8 +46,16 @@ data class ChatMessage(
     val confidence: Float? = null,
     val engram: Float? = null,
     val source: String? = null,
+    val sources: List<String> = emptyList(),
+    val linked: List<String> = emptyList(),
     val related: List<RelatedIdea> = emptyList(),
     val at: Long = System.currentTimeMillis(),
+)
+
+/** Fato guardado junto com o resultado do treino que o consolidou. */
+private data class LearnedFact(
+    val fact: Fact,
+    val outcome: TrainingOutcome,
 )
 
 data class FlyUiState(
@@ -165,13 +173,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(teaching = true, progress = null, batchLabel = null) }
         viewModelScope.launch {
             try {
-                val fact = learnFact(topic, q, a, trials)
+                val learned = learnFact(topic, q, a, trials)
                 _state.update { it.copy(teaching = false, progress = null) }
-                if (fact != null) {
+                if (learned != null) {
                     refresh()
-                    snackbar("Memória consolidada: ${fact.topic}.")
+                    snackbar(
+                        "Memória consolidada: ${learned.fact.topic} — " +
+                            "${learned.outcome.trialsUsed} ensaios, " +
+                            "${(learned.outcome.expertise * 100).toInt()}% de facilidade.",
+                    )
                     if (_state.value.voiceSettings.autoSpeak) {
-                        speakOrPlay("Aprendi sobre ${fact.topic}.")
+                        speakOrPlay("Aprendi sobre ${learned.fact.topic}.")
                     }
                 }
             } catch (error: Throwable) {
@@ -195,17 +207,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(teaching = true, progress = null) }
         viewModelScope.launch {
             var learned = 0
+            var ease = 0f
             try {
                 items.forEachIndexed { index, (question, answer) ->
                     _state.update {
                         it.copy(batchLabel = "${index + 1}/${items.size}: ${question.take(48)}")
                     }
-                    val fact = learnFact(topic, question, answer, trials)
-                    if (fact != null) learned++
+                    val result = learnFact(topic, question, answer, trials)
+                    if (result != null) {
+                        learned++
+                        ease = result.outcome.expertise
+                    }
                 }
                 _state.update { it.copy(teaching = false, progress = null, batchLabel = null) }
                 refresh()
-                snackbar("$learned de ${items.size} fatos consolidados.")
+                snackbar(
+                    "$learned de ${items.size} fatos consolidados — " +
+                        "${(ease * 100).toInt()}% de facilidade.",
+                )
                 if (learned > 0 && _state.value.voiceSettings.autoSpeak) {
                     speakOrPlay("Aprendi $learned fatos novos.")
                 }
@@ -262,6 +281,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(teaching = true, progress = null, batchLabel = "Lendo a página...") }
         viewModelScope.launch {
             var learned = 0
+            var ease = 0f
             try {
                 page.sections.forEachIndexed { index, section ->
                     _state.update {
@@ -273,11 +293,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     val reference = section.title.ifEmpty {
                         section.body.split(Regex("[.!?]")).first().take(90)
                     }
-                    if (learnFact(chosenTopic, reference, section.body, trials) != null) learned++
+                    val result = learnFact(chosenTopic, reference, section.body, trials)
+                    if (result != null) {
+                        learned++
+                        ease = result.outcome.expertise
+                    }
                 }
                 _state.update { it.copy(teaching = false, progress = null, batchLabel = null) }
                 refresh()
-                snackbar("$learned de ${page.sections.size} trechos aprendidos de ${page.host}.")
+                snackbar(
+                    "$learned de ${page.sections.size} trechos aprendidos de ${page.host} — " +
+                        "${(ease * 100).toInt()}% de facilidade.",
+                )
                 if (learned > 0 && _state.value.voiceSettings.autoSpeak) {
                     speakOrPlay("Aprendi $learned trechos de ${page.host}.")
                 }
@@ -293,7 +320,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         question: String,
         answer: String,
         trials: Int,
-    ): Fact? {
+    ): LearnedFact? {
         val engine = engine ?: return null
         val outcome = withContext(Dispatchers.Default) {
             engine.train(question, trials) { progress ->
@@ -351,7 +378,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         _state.update { it.copy(lastTraining = outcome, lastTrace = outcome.trace) }
-        return fact.copy(id = id)
+        return LearnedFact(fact.copy(id = id), outcome)
     }
 
     fun ask(question: String) {
@@ -392,6 +419,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val best = outcome.best
                 if (best != null) {
+                    // Resposta livre: a composição costura as memórias ligadas;
+                    // sem composição, vale o texto do fato mais próximo.
+                    val composed = outcome.composed
+                    val answerText = composed?.text ?: best.fact.answer
                     withContext(Dispatchers.IO) { db.recordRecall(best.fact.id) }
                     withContext(Dispatchers.IO) {
                         db.addEvent(
@@ -399,7 +430,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                                 kind = EventKind.RECALL,
                                 topic = best.fact.topic,
                                 title = text,
-                                detail = best.fact.answer,
+                                detail = answerText,
                                 strength = best.score,
                                 spikes = outcome.trace.spikes,
                                 daPulses = outcome.trace.pulses,
@@ -411,15 +442,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         ChatMessage(
                             id = System.nanoTime(),
                             fromUser = false,
-                            text = best.fact.answer,
+                            text = answerText,
                             confidence = best.score,
                             engram = best.engramSimilarity,
-                            source = best.fact.topic,
+                            source = composed?.sources?.joinToString(" · ") ?: best.fact.topic,
+                            sources = composed?.sources ?: listOf(best.fact.topic),
+                            linked = composed?.linked ?: emptyList(),
                             related = relatedOf(outcome.divergent),
                         ),
                     )
                     if (_state.value.voiceSettings.autoSpeak) {
-                        speakOrPlay(best.fact.answer)
+                        speakOrPlay(answerText)
                     }
                 } else {
                     val topics = facts.map { it.topic }.distinct().take(6).joinToString(", ")
@@ -481,7 +514,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val engine = engine ?: return@launch
                 val outcome = withContext(Dispatchers.Default) {
-                    engine.train(fact.question, fact.trials.coerceAtLeast(3)) { progress ->
+                    engine.replay(fact.question, fact.trials.coerceAtLeast(3)) { progress ->
                         _state.update { it.copy(progress = progress) }
                     }
                 }
@@ -549,7 +582,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             withContext(Dispatchers.Default) { engine?.resetPlasticity() }
             _state.update { it.copy(chat = emptyList(), lastTraining = null, lastTrace = null) }
             refresh()
-            snackbar("Memórias e plasticidade apagadas.")
+            snackbar("Memórias, plasticidade e facilidade de aprender zeradas.")
         }
     }
 
